@@ -861,9 +861,15 @@ footer p {
 
     /* Hamburger button visible on mobile */
     .menu-toggle {
-        display: flex;
+        display: grid;
+        place-items: center;
         position: absolute;
+        top: 50%;
         right: 3px;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 36px;
+        padding: 0;
         font-size: 24px;
         background: none;
         border: none;
