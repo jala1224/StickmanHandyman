@@ -90,6 +90,35 @@
         .then(response => response.json())
         .then(projects => {
             const grid = document.getElementById('projects-grid');
+
+            function preloadAllGalleryImages(projectList) {
+                const allImagePaths = Array.from(new Set(
+                    projectList.flatMap(project => (project.images || []).map(name => `images/${name}`))
+                ));
+
+                let nextIndex = 0;
+                let activeLoads = 0;
+                const maxConcurrentLoads = 4;
+
+                function startNextLoad() {
+                    while (activeLoads < maxConcurrentLoads && nextIndex < allImagePaths.length) {
+                        const preloadImg = new Image();
+                        const src = allImagePaths[nextIndex++];
+                        activeLoads++;
+
+                        preloadImg.decoding = 'async';
+                        preloadImg.onload = preloadImg.onerror = () => {
+                            activeLoads--;
+                            startNextLoad();
+                        };
+
+                        preloadImg.src = src;
+                    }
+                }
+
+                startNextLoad();
+            }
+
             projects.forEach((project, idx) => {
                 const card = document.createElement('div');
                 card.className = 'project-card';
@@ -109,6 +138,13 @@
                 card.addEventListener('click', () => openGallery(idx));
                 grid.appendChild(card);
             });
+
+            // Start warming all full-size gallery images after initial render.
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => preloadAllGalleryImages(projects));
+            } else {
+                setTimeout(() => preloadAllGalleryImages(projects), 500);
+            }
 
             // Modal overlay for gallery view
             const modal = document.createElement('div');
