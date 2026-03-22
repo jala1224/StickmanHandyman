@@ -313,6 +313,15 @@ body {
     justify-content: flex-start;
 }
 
+body.gallery-scroll-locked {
+    overflow: hidden;
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: 100%;
+    touch-action: none;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -835,28 +844,33 @@ footer p {
         display: flex;
         align-items: center;
         justify-content: center;
+        position: relative;
         width: 100%;
         white-space: nowrap;
     }
 
     .logo-bubble a {
         font-size: 21px;
-        margin-left: 8px;
+        margin-left: 0;
         line-height: 1;
         margin-right: 10px;
         margin-bottom: 3px;
+        pointer-events: none;
+        cursor: default;
     }
 
     /* Hamburger button visible on mobile */
     .menu-toggle {
         display: flex;
+        position: absolute;
+        right: 3px;
         font-size: 24px;
         background: none;
         border: none;
         color: white;
         cursor: pointer;
         line-height: 1;
-        margin-right: 3px;
+        margin: 0;
     }
 
     /* Nav links hidden initially */

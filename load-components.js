@@ -7,6 +7,15 @@ fetch('nav.html')
         // Initialize menu toggle after nav is loaded
         const toggleButton = document.querySelector('.menu-toggle');
         const topnav = document.querySelector('.topnav');
+        const companyLink = document.querySelector('.logo-bubble a');
+
+        if (companyLink) {
+            companyLink.addEventListener('click', (e) => {
+                if (window.matchMedia('(max-width: 768px)').matches) {
+                    e.preventDefault();
+                }
+            });
+        }
 
         toggleButton.addEventListener('click', (e) => {
             e.stopPropagation();

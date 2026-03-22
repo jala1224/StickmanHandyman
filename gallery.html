@@ -169,8 +169,33 @@
             let currentImgIdx = 0;
             let touchStartX = 0;
             let touchStartY = 0;
+            let lockedScrollY = 0;
             const imageArea = modal.querySelector('.gallery-image-area');
             const largeImg = modal.querySelector('.gallery-large-img');
+
+            function shouldLockBackgroundScroll() {
+                return window.matchMedia('(max-width: 1024px), (hover: none) and (pointer: coarse)').matches;
+            }
+
+            function lockBackgroundScroll() {
+                if (!shouldLockBackgroundScroll() || document.body.classList.contains('gallery-scroll-locked')) {
+                    return;
+                }
+
+                lockedScrollY = window.scrollY || window.pageYOffset || 0;
+                document.body.classList.add('gallery-scroll-locked');
+                document.body.style.top = `-${lockedScrollY}px`;
+            }
+
+            function unlockBackgroundScroll() {
+                if (!document.body.classList.contains('gallery-scroll-locked')) {
+                    return;
+                }
+
+                document.body.classList.remove('gallery-scroll-locked');
+                document.body.style.top = '';
+                window.scrollTo(0, lockedScrollY);
+            }
 
             function updateMobileImageAreaOrientation() {
                 if (!window.matchMedia('(max-width: 768px)').matches) {
@@ -193,10 +218,12 @@
                 showGalleryImage();
                 modal.style.display = 'flex';
                 grid.parentElement.insertAdjacentElement('afterend', modal);
+                lockBackgroundScroll();
             }
 
             function closeGallery() {
                 modal.style.display = 'none';
+                unlockBackgroundScroll();
             }
 
             function showGalleryImage() {
