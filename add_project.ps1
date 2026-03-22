@@ -174,7 +174,7 @@ foreach ($folder in $projectFolders) {
             $destPath = Join-Path "images" $newName
             
             # Compress image before saving (quality 90 for sharp images)
-            Compress-Image -ImagePath $image.FullName -OutputPath $destPath -Quality 90
+            Compress-Image -ImagePath $image.FullName -OutputPath $destPath -Quality 75 -MaxWidth 1600
             $images += $newName
         }
     }
