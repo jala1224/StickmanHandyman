@@ -20,15 +20,13 @@ fetch('nav.html')
         toggleButton.addEventListener('click', (e) => {
             e.stopPropagation();
             topnav.classList.toggle('expanded');
-
-            toggleButton.textContent =
-                topnav.classList.contains('expanded') ? '✕' : '☰';
+            toggleButton.setAttribute('aria-expanded', String(topnav.classList.contains('expanded')));
         });
 
         document.addEventListener('click', (e) => {
             if (!topnav.contains(e.target)) {
                 topnav.classList.remove('expanded');
-                toggleButton.textContent = '☰';
+                toggleButton.setAttribute('aria-expanded', 'false');
             }
         });
     });
