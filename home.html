@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stickman Handyman | Boulder, Colorado</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css"></noscript>
+    <style>
+        /* Critical link styles to prevent flash */
+        .nav-links a, .logo-bubble a {
+            color: #ccc;
+            text-decoration: none;
+        }
+        .nav-links a:hover, .logo-bubble a:hover {
+            color: white;
+        }
+        .nav-links a:visited, .logo-bubble a:visited,
+        .nav-links a:active, .logo-bubble a:active {
+            color: #ccc;
+        }
+        .nav-links a:visited:hover, .logo-bubble a:visited:hover,
+        .nav-links a:active:hover, .logo-bubble a:active:hover {
+            color: white;
+        }
+        /* Critical logo styles to prevent layout shift */
+        .logo {
+            width: 460px;
+            height: 468px;
+            flex-shrink: 0;
+        }
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        @media (min-width: 769px) and (max-width: 1024px) and (orientation: portrait) {
+            .logo {
+                width: 285px;
+                height: 290px;
+            }
+            .logo img {
+                width: 285px;
+                height: 290px;
+            }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+            .logo {
+                width: 325px;
+                height: 331px;
+            }
+            .logo img {
+                width: 325px;
+                height: 331px;
+            }
+        }
+        @media (max-width: 768px) {
+            .logo {
+                width: 290px;
+                height: 296px;
+                justify-content: center;
+                margin-left: auto;
+                margin-right: auto;
+                margin-top: -30px;
+            }
+            .logo img {
+                width: 290px;
+                height: 296px;
+                object-fit: contain;
+            }
+        }
+    </style>
+</head>
+<body class="home-page">
+    <div class="topnav">
+        <div class="logo-bubble">
+            <button class="menu-toggle">☰</button>
+            <a href="home.html"> Stickman Handyman </a>
+        </div>
+        <nav class="nav-links">
+            <a href="home.html" class="current-link">Home</a>
+            <a href="gallery.html">Gallery</a>
+            <a href="contact.html">Contact Us</a>
+        </nav>
+    </div>
+
+    <div class="hero-section">
+        <div class = "logo">  
+                <img src="images/logo.png" alt="Stickman Handyman Logo" fetchpriority="high">
+        </div>
+
+        <div class  = "intro">
+                <h1>Reliable Home Repairs Across Colorado</h1>
+                <p>
+                    Stickman Handyman offers reliable home repairs throughout northern Colorado,
+                    ranging from small home repairs to small renovations.
+                    We pride ourselves on treating your home like our own, while delivering exceptional service and clear communication.
+                </p>
+                <div class="why-us-grid">
+                    <div class="why-us-item">
+                        <h3>Free Estimates</h3>
+                        <p>No commitment needed — get a clear, honest quote before any work begins.</p>
+                    </div>
+                    <div class="why-us-item">
+                        <h3>Insured</h3>
+                        <p>Work done by a professional you can trust, with full coverage for peace of mind.</p>
+                    </div>
+                    <div class="why-us-item">
+                        <h3>Local to Northern Colorado</h3>
+                        <p>Based in the community and proud to serve homeowners across the region.</p>
+                    </div>
+                    <div class="why-us-item">
+                        <h3>Quality You Can Count On</h3>
+                        <p>Every job gets the same care and attention — whether it's a small fix or a full renovation.</p>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+    <section class="why-us-grid why-us-grid-tablet" aria-label="Why choose us">
+        <div class="why-us-item">
+            <h3>Free Estimates</h3>
+            <p>No commitment needed — get a clear, honest quote before any work begins.</p>
+        </div>
+        <div class="why-us-item">
+            <h3>Insured</h3>
+            <p>Work done by a professional you can trust, with full coverage for peace of mind.</p>
+        </div>
+        <div class="why-us-item">
+            <h3>Local to Northern Colorado</h3>
+            <p>Based in the community and proud to serve homeowners across the region.</p>
+        </div>
+        <div class="why-us-item">
+            <h3>Quality You Can Count On</h3>
+            <p>Every job gets the same care and attention — whether it's a small fix or a full renovation.</p>
+        </div>
+    </section>
+
+    <div class="content">
+        <section class="cards-grid">
+            <div class="card">
+                <img src="images/icons/bulb.svg" class="icon" alt="bulb icon" width="160" height="160">
+                <p>Electrical Work</p>
+            </div>
+            <div class="card">
+                <img src="images/icons/hammer.svg" class="icon" alt="hammer icon" width="160" height="160">
+                <p>General Repairs</p>
+            </div>
+            <div class="card">
+                <img src="images/icons/roller.svg" class="icon" alt="roller icon" width="160" height="160">
+                <p>Painting Services</p>
+            </div>
+            <div class="card">
+                <img src="images/icons/square.svg" class="icon" alt="square icon" width="160" height="160">
+                <p>Small Renovations</p>
+            </div>
+            <div class="card">
+                <img src="images/icons/valve.svg" class="icon" alt="valve icon" width="160" height="160">
+                <p>Plumbing Fixes</p>
+            </div>
+            <div class="card">
+                <img src="images/icons/wrench.svg" class="icon" alt="wrench icon" width="160" height="160">
+                <p>Contracted Maintenance</p>
+            </div>
+        </section>
+        </section>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Stickman Handyman. All rights reserved.</p>
+    </footer>
+    <script>
+        const toggleButton = document.querySelector('.menu-toggle');
+        const topnav = document.querySelector('.topnav');
+
+        toggleButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            topnav.classList.toggle('expanded');
+
+            toggleButton.textContent =
+                topnav.classList.contains('expanded') ? '✕' : '☰';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!topnav.contains(e.target)) {
+                topnav.classList.remove('expanded');
+                toggleButton.textContent = '☰';
+            }
+        });
+
+        const preloadLinks = document.querySelectorAll('.nav-links a, .logo-bubble a');
+        preloadLinks.forEach(link => {
+            link.addEventListener('mouseenter', () => {
+                const href = link.getAttribute('href');
+                if (href && !document.querySelector(`link[href="${href}"]`)) {
+                    const preloadLink = document.createElement('link');
+                    preloadLink.rel = 'preload';
+                    preloadLink.href = href;
+                    preloadLink.as = 'document';
+                    document.head.appendChild(preloadLink);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gallery | Stickman Handyman</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload" href="projects.json" as="fetch">
+    <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css"></noscript>
+    <style>
+        /* Critical link styles to prevent flash */
+        .nav-links a, .logo-bubble a {
+            color: #ccc;
+            text-decoration: none;
+        }
+        .nav-links a:hover, .logo-bubble a:hover {
+            color: white;
+        }
+        .nav-links a:visited, .logo-bubble a:visited,
+        .nav-links a:active, .logo-bubble a:active {
+            color: #ccc;
+        }
+        .nav-links a:visited:hover, .logo-bubble a:visited:hover,
+        .nav-links a:active:hover, .logo-bubble a:active:hover {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div class="topnav">
+    <div class="logo-bubble">
+        <button class="menu-toggle">☰</button>
+        <a href="home.html"> Stickman Handyman </a>
+    </div>
+    <nav class="nav-links">
+        <a href="home.html">Home</a>
+        <a href="gallery.html" class="current-link">Gallery</a>
+        <a href="contact.html">Contact Us</a>
+    </nav>
+</div>
+
+<div class="content">
+    <section id="gallery">
+        <h1 class="section-title">Recent Work</h1>
+        <div id="projects-grid" class="gallery-grid"></div>
+    </section>
+</div>
+
+<footer>
+    <p>&copy; 2026 Stickman Handyman. All rights reserved.</p>
+</footer>
+<script>
+    const toggleButton = document.querySelector('.menu-toggle');
+    const topnav = document.querySelector('.topnav');
+
+    toggleButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        topnav.classList.toggle('expanded');
+
+        toggleButton.textContent =
+            topnav.classList.contains('expanded') ? '✕' : '☰';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!topnav.contains(e.target)) {
+            topnav.classList.remove('expanded');
+            toggleButton.textContent = '☰';
+        }
+    });
+
+    // Preload pages on hover
+    const preloadLinks = document.querySelectorAll('.nav-links a, .logo-bubble a');
+    preloadLinks.forEach(link => {
+        link.addEventListener('mouseenter', () => {
+            const href = link.getAttribute('href');
+            if (href && !document.querySelector(`link[href="${href}"]`)) {
+                const preloadLink = document.createElement('link');
+                preloadLink.rel = 'preload';
+                preloadLink.href = href;
+                preloadLink.as = 'document';
+                document.head.appendChild(preloadLink);
+            }
+        });
+    });
+</script>
+<script>
+    // Load projects and create cards with interactive gallery view
+    fetch('projects.json')
+        .then(response => response.json())
+        .then(projects => {
+            const grid = document.getElementById('projects-grid');
+            projects.forEach((project, idx) => {
+                const card = document.createElement('div');
+                card.className = 'project-card';
+                card.dataset.index = idx;
+
+                const img = document.createElement('img');
+                img.src = `images/${project.preview || project.images[0]}`;
+                img.alt = project.name;
+                img.loading = "lazy";
+                // Don't force dimensions - let CSS handle sizing
+
+                const title = document.createElement('h3');
+                title.textContent = project.name;
+
+                card.appendChild(img);
+                card.appendChild(title);
+                card.addEventListener('click', () => openGallery(idx));
+                grid.appendChild(card);
+            });
+
+            // Modal overlay for gallery view
+            const modal = document.createElement('div');
+            modal.id = 'gallery-modal';
+            modal.style.display = 'none';
+            modal.innerHTML = `
+                <div class="gallery-viewer">
+                    <button class="close-modal" title="Close">&times;</button>
+                    <div class="gallery-image-area">
+                        <img class="gallery-large-img" src="" alt="" />
+                    </div>
+                    <div class="gallery-header">
+                        <button class="gallery-prev" title="Previous">&#8592;</button>
+                        <div class="gallery-title"></div>
+                        <button class="gallery-next" title="Next">&#8594;</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            let currentProjectIdx = 0;
+            let currentImgIdx = 0;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            const imageArea = modal.querySelector('.gallery-image-area');
+            const largeImg = modal.querySelector('.gallery-large-img');
+
+            function updateMobileImageAreaOrientation() {
+                if (!window.matchMedia('(max-width: 768px)').matches) {
+                    imageArea.classList.remove('is-portrait', 'is-landscape');
+                    return;
+                }
+
+                if (!largeImg.naturalWidth || !largeImg.naturalHeight) {
+                    return;
+                }
+
+                const isPortrait = largeImg.naturalHeight > largeImg.naturalWidth;
+                imageArea.classList.toggle('is-portrait', isPortrait);
+                imageArea.classList.toggle('is-landscape', !isPortrait);
+            }
+
+            function openGallery(projectIdx) {
+                currentProjectIdx = projectIdx;
+                currentImgIdx = 0;
+                showGalleryImage();
+                modal.style.display = 'flex';
+                grid.parentElement.insertAdjacentElement('afterend', modal);
+            }
+
+            function closeGallery() {
+                modal.style.display = 'none';
+            }
+
+            function showGalleryImage() {
+                const project = projects[currentProjectIdx];
+                const imgList = project.images;
+                largeImg.onload = updateMobileImageAreaOrientation;
+                largeImg.src = `images/${imgList[currentImgIdx]}`;
+                largeImg.alt = project.name;
+                modal.querySelector('.gallery-title').textContent = project.name;
+
+                if (largeImg.complete) {
+                    updateMobileImageAreaOrientation();
+                }
+            }
+
+            function showPreviousImage() {
+                const project = projects[currentProjectIdx];
+                currentImgIdx = (currentImgIdx - 1 + project.images.length) % project.images.length;
+                showGalleryImage();
+            }
+
+            function showNextImage() {
+                const project = projects[currentProjectIdx];
+                currentImgIdx = (currentImgIdx + 1) % project.images.length;
+                showGalleryImage();
+            }
+
+            modal.querySelector('.close-modal').onclick = closeGallery;
+            modal.querySelector('.gallery-prev').onclick = function(e) {
+                e.stopPropagation();
+                showPreviousImage();
+            };
+            modal.querySelector('.gallery-next').onclick = function(e) {
+                e.stopPropagation();
+                showNextImage();
+            };
+
+            imageArea.addEventListener('touchstart', (e) => {
+                const touch = e.changedTouches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+            }, { passive: true });
+
+            imageArea.addEventListener('touchend', (e) => {
+                const touch = e.changedTouches[0];
+                const deltaX = touch.clientX - touchStartX;
+                const deltaY = touch.clientY - touchStartY;
+                const swipeThreshold = 40;
+
+                // Handle horizontal swipes only and ignore mostly vertical gestures.
+                if (Math.abs(deltaX) > swipeThreshold && Math.abs(deltaX) > Math.abs(deltaY)) {
+                    if (deltaX < 0) {
+                        showNextImage();
+                    } else {
+                        showPreviousImage();
+                    }
+                }
+            }, { passive: true });
+
+            // Close modal on background click
+            modal.onclick = function(e) {
+                if (e.target === modal) closeGallery();
+            };
+
+            window.addEventListener('resize', updateMobileImageAreaOrientation);
+        })
+        .catch(error => console.error('Error loading projects:', error));
+</script>
+</body>
+</html>

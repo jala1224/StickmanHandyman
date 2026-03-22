@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Contact | Stickman Handyman</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css"></noscript>
+    <style>
+        /* Critical link styles to prevent flash */
+        .nav-links a, .logo-bubble a {
+            color: #ccc;
+            text-decoration: none;
+        }
+        .nav-links a:hover, .logo-bubble a:hover {
+            color: white;
+        }
+        .nav-links a:visited, .logo-bubble a:visited,
+        .nav-links a:active, .logo-bubble a:active {
+            color: #ccc;
+        }
+        .nav-links a:visited:hover, .logo-bubble a:visited:hover,
+        .nav-links a:active:hover, .logo-bubble a:active:hover {
+            color: white;
+        }
+    </style>
+</head>
+<body class="contact-page">
+
+<div class="topnav">
+    <div class="logo-bubble">
+        <button class="menu-toggle">☰</button>
+        <a href="home.html"> Stickman Handyman </a>
+    </div>
+    <nav class="nav-links">
+        <a href="home.html">Home</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="contact.html" class="current-link">Contact Us</a>
+    </nav>
+</div>
+
+<div class="content">
+    <section class="contact-layout">
+        <div class="contact-left">
+            <article class="contact-panel">
+                <h2>Contact Us</h2>
+                <p>Boulder, Colorado</p>
+                <p>
+                    Call or Text: <a href="tel:7205924438">(720) 592-4438</a>
+                </p>
+                <p>
+                    Email: <a href="mailto:stickman_handyman@outlook.com">stickman_handyman@outlook.com</a>
+                </p>
+            </article>
+
+            <article class="contact-panel">
+                <h2>Billing</h2>
+                <p>$80 / hr &mdash; 2 hour minimum</p>
+                <p>Multi-person projects are quoted on a per-project basis &mdash; contact us for a free estimate.</p>
+            </article>
+
+            <article class="contact-panel">
+                <h2>Availability</h2>
+                <p>Monday &ndash; Saturday</p>
+            </article>
+        </div>
+
+        <article class="contact-panel">
+            <h1>About Me</h1>
+            <p>
+                My name is Jacob Lancaster, and I am the owner of Stickman Handyman. With 6 years of hands-on experience, I have built my business around reliable service, consistent workmanship, and clear communication.
+            </p>
+            <p>
+                I recently completed my engineering degree at CU Boulder, and I bring that same problem-solving mindset to every project. I focus on practical, long-lasting solutions and take pride in doing the job right.
+            </p>
+            <p>
+                Looking ahead, I plan to grow Stickman Handyman into a full-service home improvement company — expanding the team, taking on larger renovation projects, and continuing to serve the northern Colorado community with the same quality and reliability that has defined my work from day one.
+            </p>
+        </article>
+    </section>
+</div>
+
+<footer>
+    <p>&copy; 2026 Stickman Handyman. All rights reserved.</p>
+</footer>
+<script>
+    const toggleButton = document.querySelector('.menu-toggle');
+    const topnav = document.querySelector('.topnav');
+
+    toggleButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        topnav.classList.toggle('expanded');
+
+        toggleButton.textContent =
+            topnav.classList.contains('expanded') ? '✕' : '☰';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!topnav.contains(e.target)) {
+            topnav.classList.remove('expanded');
+            toggleButton.textContent = '☰';
+        }
+    });
+
+    // Preload pages on hover
+    const preloadLinks = document.querySelectorAll('.nav-links a, .logo-bubble a');
+    preloadLinks.forEach(link => {
+        link.addEventListener('mouseenter', () => {
+            const href = link.getAttribute('href');
+            if (href && !document.querySelector(`link[href="${href}"]`)) {
+                const preloadLink = document.createElement('link');
+                preloadLink.rel = 'preload';
+                preloadLink.href = href;
+                preloadLink.as = 'document';
+                document.head.appendChild(preloadLink);
+            }
+        });
+    });
+</script>
+</body>
+</html>
