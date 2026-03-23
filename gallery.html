@@ -92,33 +92,35 @@
         .then(response => response.json())
         .then(projects => {
             const grid = document.getElementById('projects-grid');
+            const preloadedImagePaths = new Set();
 
-            function preloadAllGalleryImages(projectList) {
-                const allImagePaths = Array.from(new Set(
-                    projectList.flatMap(project => (project.images || []).map(name => `images/${name}`))
-                ));
-
-                let nextIndex = 0;
-                let activeLoads = 0;
-                const maxConcurrentLoads = 4;
-
-                function startNextLoad() {
-                    while (activeLoads < maxConcurrentLoads && nextIndex < allImagePaths.length) {
-                        const preloadImg = new Image();
-                        const src = allImagePaths[nextIndex++];
-                        activeLoads++;
-
-                        preloadImg.decoding = 'async';
-                        preloadImg.onload = preloadImg.onerror = () => {
-                            activeLoads--;
-                            startNextLoad();
-                        };
-
-                        preloadImg.src = src;
-                    }
+            function preloadImage(src) {
+                if (!src || preloadedImagePaths.has(src)) {
+                    return;
                 }
 
-                startNextLoad();
+                preloadedImagePaths.add(src);
+                const preloadImg = new Image();
+                preloadImg.decoding = 'async';
+                preloadImg.src = src;
+            }
+
+            function preloadAdjacentProjectImages(projectIdx, imageIdx) {
+                const project = projects[projectIdx];
+                const imageCount = project.images.length;
+
+                if (imageCount < 2) {
+                    return;
+                }
+
+                const adjacentIndexes = new Set([
+                    (imageIdx + 1) % imageCount,
+                    (imageIdx - 1 + imageCount) % imageCount
+                ]);
+
+                adjacentIndexes.forEach((adjacentIdx) => {
+                    preloadImage(`images/${project.images[adjacentIdx]}`);
+                });
             }
 
             projects.forEach((project, idx) => {
@@ -132,21 +134,19 @@
                 img.loading = "lazy";
                 // Don't force dimensions - let CSS handle sizing
 
+                const countPill = document.createElement('div');
+                countPill.className = 'project-card-count-pill';
+                countPill.textContent = `${project.images.length} image${project.images.length === 1 ? '' : 's'}`;
+
                 const title = document.createElement('h3');
                 title.textContent = project.name;
 
+                card.appendChild(countPill);
                 card.appendChild(img);
                 card.appendChild(title);
                 card.addEventListener('click', () => openGallery(idx));
                 grid.appendChild(card);
             });
-
-            // Start warming all full-size gallery images after initial render.
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(() => preloadAllGalleryImages(projects));
-            } else {
-                setTimeout(() => preloadAllGalleryImages(projects), 500);
-            }
 
             // Modal overlay for gallery view
             const modal = document.createElement('div');
@@ -156,6 +156,7 @@
                 <div class="gallery-viewer">
                     <button class="close-modal" title="Close">&times;</button>
                     <div class="gallery-image-area">
+                        <div class="gallery-count-pill"></div>
                         <img class="gallery-large-img" src="" alt="" />
                     </div>
                     <div class="gallery-header">
@@ -174,6 +175,7 @@
             let lockedScrollY = 0;
             const imageArea = modal.querySelector('.gallery-image-area');
             const largeImg = modal.querySelector('.gallery-large-img');
+            const countPill = modal.querySelector('.gallery-count-pill');
 
             function shouldLockBackgroundScroll() {
                 return window.matchMedia('(max-width: 1024px), (hover: none) and (pointer: coarse)').matches;
@@ -231,10 +233,14 @@
             function showGalleryImage() {
                 const project = projects[currentProjectIdx];
                 const imgList = project.images;
+                const currentSrc = `images/${imgList[currentImgIdx]}`;
                 largeImg.onload = updateMobileImageAreaOrientation;
-                largeImg.src = `images/${imgList[currentImgIdx]}`;
+                largeImg.src = currentSrc;
                 largeImg.alt = project.name;
                 modal.querySelector('.gallery-title').textContent = project.name;
+                countPill.textContent = `${currentImgIdx + 1} / ${imgList.length}`;
+                preloadedImagePaths.add(currentSrc);
+                preloadAdjacentProjectImages(currentProjectIdx, currentImgIdx);
 
                 if (largeImg.complete) {
                     updateMobileImageAreaOrientation();

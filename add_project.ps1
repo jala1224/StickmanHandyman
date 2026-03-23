@@ -121,6 +121,55 @@ function Crop-Image {
     Write-Host "Cropped preview: $(Split-Path $OutputPath -Leaf)"
 }
 
+function Get-OrderedImageFiles {
+    param(
+        [string]$ProjectFolderPath,
+        [System.IO.FileInfo[]]$ImageFiles
+    )
+
+    $supportedExtensions = @('.jpg', '.jpeg', '.png', '.gif', '.heic')
+    $orderFile = Join-Path $ProjectFolderPath 'image-order.txt'
+    $remainingFiles = @($ImageFiles | Sort-Object Name)
+
+    if (-not (Test-Path $orderFile)) {
+        return $remainingFiles
+    }
+
+    $orderedFiles = New-Object System.Collections.Generic.List[System.IO.FileInfo]
+    $usedPaths = New-Object System.Collections.Generic.HashSet[string]([System.StringComparer]::OrdinalIgnoreCase)
+    $orderEntries = Get-Content $orderFile |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { $_ -and -not $_.StartsWith('#') }
+
+    foreach ($entry in $orderEntries) {
+        $matchedFile = $remainingFiles | Where-Object {
+            $_.Name -ieq $entry -or $_.BaseName -ieq $entry
+        } | Select-Object -First 1
+
+        if (-not $matchedFile) {
+            Write-Host "Warning: image-order entry '$entry' not found in $(Split-Path $ProjectFolderPath -Leaf)"
+            continue
+        }
+
+        if (-not $supportedExtensions.Contains($matchedFile.Extension.ToLower())) {
+            Write-Host "Warning: image-order entry '$entry' is not a supported image type and will be ignored."
+            continue
+        }
+
+        if ($usedPaths.Add($matchedFile.FullName)) {
+            $orderedFiles.Add($matchedFile)
+        }
+    }
+
+    foreach ($file in $remainingFiles) {
+        if ($usedPaths.Add($file.FullName)) {
+            $orderedFiles.Add($file)
+        }
+    }
+
+    return @($orderedFiles)
+}
+
 # Check for ImageMagick
 $magickPath = Test-ImageMagick
 if (!$magickPath) {
@@ -158,6 +207,7 @@ foreach ($folder in $projectFolders) {
 
     # Get all image files including HEIC
     $imageFiles = Get-ChildItem $folder.FullName -File | Where-Object { $_.Extension -in @('.jpg', '.jpeg', '.png', '.gif', '.heic') }
+    $imageFiles = Get-OrderedImageFiles -ProjectFolderPath $folder.FullName -ImageFiles $imageFiles
     $images = @()
 
     foreach ($image in $imageFiles) {
@@ -191,6 +241,8 @@ foreach ($folder in $projectFolders) {
             images = $images
             preview = $previewName
         }
+
+        $projects = @($projects | Where-Object { $_.name -ne $projectName })
         $projects += $newProject
         Write-Host "Added project: $projectName with $($images.Count) image(s)"
     } else {

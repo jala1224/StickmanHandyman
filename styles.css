@@ -46,6 +46,7 @@
     flex: 1;
     min-height: 0;
     touch-action: pan-y;
+    position: relative;
 }
 
 .gallery-large-img {
@@ -58,6 +59,41 @@
     background: #f3f3f3;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     display: block;
+}
+
+.gallery-count-pill,
+.project-card-count-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.gallery-count-pill {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1;
+    color: #fff;
+    background: rgba(24, 24, 24, 0.72);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    pointer-events: none;
+}
+
+.project-card-count-pill {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1;
+    color: #fff;
+    background: rgba(18, 18, 18, 0.7);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
 }
 
 @media (max-width: 600px) {
@@ -94,6 +130,12 @@
         width: 98vw;
         height: 120px;
     }
+    .project-card-count-pill {
+        top: 10px;
+        right: 10px;
+        padding: 6px 10px;
+        font-size: 12px;
+    }
     .project-card h3 {
         font-size: 16px;
         margin: 0;
@@ -124,6 +166,12 @@
         width: 36px;
         height: 36px;
         font-size: 20px;
+    }
+    .gallery-count-pill {
+        top: 10px;
+        right: 10px;
+        padding: 6px 10px;
+        font-size: 12px;
     }
 }
 
