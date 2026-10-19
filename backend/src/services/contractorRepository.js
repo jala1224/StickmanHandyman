@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.resolve(currentDir, '..', '..', 'data');
+const dataDir = process.env.STICKMAN_DATA_DIR || path.resolve(currentDir, '..', '..', 'data');
 const dataPath = path.join(dataDir, 'contractors.json');
 
 function createOwnerContractor() {

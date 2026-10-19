@@ -1,0 +1,11 @@
+{
+  "name": "stickman-handyman-website",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:frontend": "node scripts/serve.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test backend/test/*.test.js",
+    "verify": "node scripts/check.mjs --test"
+  }
+}

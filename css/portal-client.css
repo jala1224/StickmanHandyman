@@ -1,0 +1,178 @@
+.portal-activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.portal-activity-item {
+    border: 1px solid rgba(34, 34, 34, 0.16);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+}
+
+.portal-activity-item strong {
+    display: block;
+    color: #222;
+}
+
+.portal-activity-meta {
+    margin: 4px 0 0;
+    color: #555;
+    font-size: 0.94rem;
+}
+
+.portal-inline-actions {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.portal-inline-message {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.portal-account-edit-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+.portal-account-edit-actions section {
+    display: grid;
+    align-content: start;
+    justify-items: start;
+    gap: 12px;
+}
+
+.portal-account-edit-actions h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.portal-account-detail-list {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+}
+
+.portal-account-detail-list > div {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 8px;
+}
+
+.portal-account-detail-list dt {
+    color: #555;
+    font-weight: 600;
+}
+
+.portal-account-detail-list dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.portal-client-service-addresses {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+}
+
+.portal-client-service-addresses[hidden] {
+    display: none;
+}
+
+.portal-client-service-addresses h3 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.portal-client-service-address-list {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.portal-client-service-address-list li {
+    overflow-wrap: anywhere;
+}
+
+.portal-edit-dialog {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: min(560px, calc(100vw - 32px));
+    max-height: min(90dvh, 760px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    border: 0;
+    border-radius: 14px;
+    padding: 24px;
+    color: #1f2937;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+}
+
+.portal-edit-dialog::backdrop {
+    background: rgba(17, 24, 39, 0.55);
+}
+
+.portal-edit-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.portal-edit-dialog-header h2 {
+    margin: 0;
+    font-size: 21px;
+}
+
+.portal-edit-dialog-close {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(34, 34, 34, 0.18);
+    border-radius: 50%;
+    background: #fff;
+    color: #1f2937;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.portal-edit-dialog .portal-form {
+    margin-top: 18px;
+}
+
+.portal-edit-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+    .portal-account-edit-actions {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .portal-edit-dialog {
+        padding: 20px;
+    }
+}
+
+.portal-inline-message-success { color: #166534; }
+.portal-inline-message-error { color: #b91c1c; }

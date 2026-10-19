@@ -1,6 +1,6 @@
 # Stickman Handyman Backend
 
-This folder contains the first backend implementation for admin/client portal support.
+This folder contains the Node.js API for the customer and admin portals.
 
 ## What it includes
 
@@ -17,6 +17,10 @@ This folder contains the first backend implementation for admin/client portal su
 
 ## Local development
 
+For the isolated full-site sandbox, run `npm run dev` from the project root instead. It starts the frontend proxy plus this API, uses `.local/` records/PDFs, disables live integrations, and provides development-only sign-in credentials documented in [../README.md](../README.md).
+
+To run this API separately with your own `backend/.env` and the normal `backend/data/` records:
+
 1. Copy `.env.example` to `.env`.
 2. Install dependencies in this folder.
 3. Start the API:
@@ -25,6 +29,10 @@ This folder contains the first backend implementation for admin/client portal su
 npm install
 npm run dev
 ```
+
+Run `npm run verify` to check project syntax/asset references and run isolated billing and simulated deployment tests. See [../README.md](../README.md) for frontend development and [../AWS_DEPLOYMENT.md](../AWS_DEPLOYMENT.md) for the dry-run-first backend release script and rollback limits.
+
+Known first-run limitation: the contractor-store initializer does not include `paymentTransactions` when its data file is absent, which can make the first invoice save fail. The regression tests seed the normal empty storage shape in their sandbox; they do not fix or exercise that initialization path. Existing production records are not changed by the cleanup.
 
 ## Endpoints
 

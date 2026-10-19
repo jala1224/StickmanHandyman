@@ -1,0 +1,87 @@
+.portal-activity-panel {
+    margin-top: 18px;
+}
+
+.portal-activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.portal-activity-item {
+    border: 1px solid rgba(34, 34, 34, 0.16);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+}
+
+.portal-activity-item strong {
+    display: block;
+    color: #222;
+}
+
+.portal-activity-meta {
+    margin: 4px 0 0;
+    color: #555;
+    font-size: 0.94rem;
+}
+
+.portal-inline-actions {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.portal-inline-message {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.portal-inline-message-success { color: #166534; }
+.portal-inline-message-error { color: #b91c1c; }
+
+.portal-activation-panel {
+    margin-top: 12px;
+}
+
+.portal-signin-panel {
+    margin-top: 12px;
+}
+
+.portal-activation-panel h3 {
+    margin: 0 0 6px;
+    color: #222;
+}
+
+.portal-signin-panel h3 {
+    margin: 0 0 6px;
+    color: #222;
+    font-size: 1rem;
+}
+
+.portal-fallback {
+    margin-top: 14px;
+}
+
+.portal-fallback .portal-button {
+    display: inline-block;
+    text-decoration: none;
+}
+
+#portal-found-panel .portal-button,
+#portal-found-fallback .portal-button {
+    background: rgba(30, 30, 30, 0.9);
+    border-color: rgba(30, 30, 30, 0.9);
+    color: #fff;
+}
+
+#portal-found-panel .portal-button:hover,
+#portal-found-fallback .portal-button:hover {
+    background: #1e1e1e;
+    border-color: #1e1e1e;
+    color: #fff;
+}

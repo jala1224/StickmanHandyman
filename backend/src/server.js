@@ -49,6 +49,6 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found.' });
 });
 
-app.listen(config.port, () => {
+app.listen(config.port, config.bindAddress, () => {
   console.log(`Stickman Handyman backend running on port ${config.port}`);
 });

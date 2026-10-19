@@ -115,7 +115,7 @@
     }
 
     function isLocalHostname(hostname) {
-        return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+        return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]';
     }
 
     function defaultApiBase() {
@@ -175,7 +175,7 @@
 
     function readApiBase() {
         const pageHostname = window.location.hostname.toLowerCase();
-        if (pageHostname && !isLocalHostname(pageHostname)) {
+        if (pageHostname) {
             return defaultApiBase();
         }
 
