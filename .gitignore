@@ -32,3 +32,6 @@ Invoices/
 
 # Local validation state
 .github/hooks/.validation-ran.flag
+
+# Isolated local development records and PDFs
+.local/

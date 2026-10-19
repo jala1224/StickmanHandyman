@@ -44,7 +44,7 @@ The authoritative frontend allowlist is in `deploy-to-s3.ps1`. It includes:
 7. `nav.html` and `footer.html`
 8. `styles.css` and `load-components.js`
 9. `projects.json`
-10. `css/`, `images/`, `invoice_template/`, and `fonts/`
+10. `css/`, `js/` (including `js/admin/`), `images/`, `invoice_template/`, and `fonts/`
 
 Do not deploy these folders and files:
 
@@ -148,10 +148,22 @@ Dry run with project generation:
 
 ## Backend Release Checklist
 
-The repository provides host configuration in `backend/deploy/api.nginx.conf` and `backend/deploy/stickman-handyman.service`; it does not include an automated backend deployment script. The nginx file is an HTTP reverse-proxy example, not a complete production TLS configuration.
+Use `backend/deploy/deploy-backend.ps1` with `backend/deploy/release.sh`. The PowerShell wrapper defaults to a dry run:
+
+```powershell
+.\backend\deploy\deploy-backend.ps1 -HostName "api.stickman-handyman.com" -KeyPath "C:\path\to\your-private-key.pem"
+```
+
+Add `-Apply` only for an authorized release. It runs local `npm run verify`, stages allowlisted backend code/templates/fonts, installs locked production dependencies on the host, backs up runtime data, replaces application files, restarts the service, and verifies local and public health. Backend releases do not publish the frontend.
+
+The host must already be provisioned, with the application's `backend/data/`, `backend/.env`, nginx/TLS configuration, service unit, Node.js, npm, curl, and tar. SSH host identity must already be trusted. The service user must have noninteractive permission for the required stop/restart operations; the script does not request elevation or change IAM/firewall rules. Encrypted SSH identities must be unlocked through an existing SSH agent; no passphrase is collected by the script.
+
+Backups remain in the application's `.releases/` directory. The API is stopped briefly for a consistent runtime-data snapshot and code switch. A restart or local-health failure triggers automatic application-code/dependency rollback, not runtime-data rollback. A later public-health failure is reported for investigation; it does not automatically roll back a locally healthy backend. Backup retention/pruning is manual. Treat `.releases/` as private business data.
+
+The repository also provides host configuration in `backend/deploy/api.nginx.conf` and `backend/deploy/stickman-handyman.service`. The nginx file is an HTTP reverse-proxy example, not a complete production TLS configuration.
 
 1. Verify the production host and authorized SSH access. Keep private keys outside the repository and restrict their local file permissions; never paste credentials into commands or documentation.
-2. Run `npm run check` from `backend/`, syntax-check changed modules, and run behavior checks for the changed API paths. A successful server-entry syntax check alone does not verify invoice or payroll calculations.
+2. Run `npm run verify` from the root or `backend/`, plus browser checks for changed workflows. Syntax checks alone do not verify invoice or payroll calculations.
 3. Back up changed application files and production runtime state: `backend/data/` and the application's `invoices/` directory. Preserve `backend/.env` and the existing TLS/nginx configuration.
 4. Stage only the intended source changes. Never replace production records with local JSON data, overwrite `.env`, or copy local `node_modules`. For dependency changes, use the reviewed lockfile and `npm ci --omit=dev` on the host.
 5. Validate staged modules with `node --check` before replacing live files. Retain file permissions and keep a rollback copy outside `backend/src/`.

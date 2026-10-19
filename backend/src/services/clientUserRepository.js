@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.resolve(currentDir, '..', '..', 'data');
+const dataDir = process.env.STICKMAN_DATA_DIR || path.resolve(currentDir, '..', '..', 'data');
 const dataPath = path.join(dataDir, 'client-users.json');
 
 export function loadClientUsers() {

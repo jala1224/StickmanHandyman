@@ -49,6 +49,7 @@ try {
         'projects.json',
         'images',
         'css',
+        'js',
         'invoice_template',
         'fonts'
     )
@@ -84,6 +85,7 @@ try {
         '--include', 'images/*',
         '--include', 'images/icons/*',
         '--include', 'css/*.css',
+        '--include', 'js/*',
         '--include', 'invoice_template/*',
         '--include', 'fonts/*'
     )

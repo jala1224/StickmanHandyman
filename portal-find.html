@@ -2,18 +2,13 @@
 <html lang="en">
 <head>
     <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18054809084"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'AW-18054809084');
-    </script>
+    <script src="js/portal-find-analytics.js?v=20261019"></script>
     <meta charset="UTF-8">
     <title>Find Your Account | Stickman Handyman</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preload" href="styles.css?v=20261007" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="styles.css?v=20261007"></noscript>
-    <link rel="stylesheet" href="css/portal-find.css?v=20261019">
+    <link rel="stylesheet" href="css/navigation.css?v=20261019">
 </head>
 <body class="portal-page">
 <div class="topnav">
@@ -66,53 +61,6 @@
     <p>&copy; 2026 Stickman Handyman. All rights reserved.</p>
 </footer>
 <script src="portal-shared.js?v=20261007"></script>
-<script>
-    const portal = window.StickmanPortal;
-    portal.initTopnav();
-    portal.populateStateSelects();
-
-    const lookupForm = document.getElementById('portal-lookup-form');
-    const lookupMessage = document.getElementById('portal-lookup-message');
-
-    lookupForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        portal.clearLastLookupPayload();
-        setMessage(lookupMessage, 'Searching for your account...', false);
-
-        const apiBase = portal.readApiBase();
-        if (!apiBase) {
-            setMessage(lookupMessage, 'Unable to determine the backend address for this site.', true);
-            return;
-        }
-
-        const formData = new FormData(lookupForm);
-        try {
-            const payload = await portal.lookupAccount(apiBase, {
-                name: String(formData.get('name') || '').trim(),
-                address: portal.formatClientAddress({
-                    street: formData.get('street'),
-                    city: formData.get('city'),
-                    state: formData.get('state'),
-                    zip: formData.get('zip'),
-                }),
-            });
-
-            if (!portal.saveLastLookupPayload(payload)) {
-                throw new Error('Account found, but we could not prepare your details page. Please try again.');
-            }
-
-            window.location.href = 'portal-found.html';
-        } catch (error) {
-            portal.clearLookupAccess();
-            portal.clearLastLookupPayload();
-            setMessage(lookupMessage, error.message || 'No matching account found.', true);
-        }
-    });
-
-    function setMessage(element, message, isError) {
-        element.textContent = message;
-        element.className = isError ? 'portal-message portal-message-error' : 'portal-message portal-message-success';
-    }
-</script>
+<script src="js/portal-find.js?v=20261019"></script>
 </body>
 </html>

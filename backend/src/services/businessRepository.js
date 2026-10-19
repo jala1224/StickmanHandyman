@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { buildContractorHourTiers, getContractorById, getContractorInvoiceHours } from './contractorRepository.js';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.resolve(currentDir, '..', '..', 'data');
+const dataDir = process.env.STICKMAN_DATA_DIR || path.resolve(currentDir, '..', '..', 'data');
 const dataPath = path.join(dataDir, 'business.json');
 let storedContracts = [];
 

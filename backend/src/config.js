@@ -5,6 +5,7 @@ dotenv.config();
 const corsOriginValue = process.env.CORS_ALLOWED_ORIGINS ?? process.env.CORS_ORIGIN ?? '*';
 export const config = {
   port: Number.parseInt(process.env.PORT ?? '3000', 10),
+  bindAddress: process.env.STICKMAN_BIND_ADDRESS,
   corsOrigins: corsOriginValue.split(',').map((origin) => origin.trim()).filter(Boolean),
   adminBootstrapEmail: process.env.ADMIN_BOOTSTRAP_EMAIL ?? 'admin@example.com',
   adminBootstrapPassword: process.env.ADMIN_BOOTSTRAP_PASSWORD ?? 'change-me-now',

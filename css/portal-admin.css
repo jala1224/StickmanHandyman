@@ -1,10 +1,3 @@
-.nav-links a, .logo-bubble a { color: #ccc; text-decoration: none; }
-.nav-links a:hover, .logo-bubble a:hover { color: white; }
-.nav-links a:visited, .logo-bubble a:visited,
-.nav-links a:active, .logo-bubble a:active { color: #ccc; }
-.nav-links a:visited:hover, .logo-bubble a:visited:hover,
-.nav-links a:active:hover, .logo-bubble a:active:hover { color: white; }
-
 .admin-page .content { padding: 0 0 40px 0; }
 
 .admin-layout {
@@ -639,8 +632,7 @@
     justify-content: flex-end;
 }
 
-.admin-modal-backdrop.hidden,
-.portal-pdf-modal-backdrop.hidden {
+.admin-modal-backdrop.hidden {
     display: none;
 }
 
@@ -753,83 +745,10 @@ input[type="number"] {
     margin-top: 6px;
 }
 
-.portal-pdf-modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.75);
-    z-index: 3500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-.portal-pdf-modal {
-    background: #fff;
-    border-radius: 12px;
-    width: min(850px, 94vw);
-    aspect-ratio: 8.5 / 11;
-    max-height: 92vh;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-    overflow: hidden;
-    position: relative;
-    padding: 14px;
-    box-sizing: border-box;
-}
-
 .portal-pdf-modal-download {
     position: absolute;
     left: 14px;
     bottom: 14px;
-}
-
-.portal-pdf-modal canvas {
-    position: absolute;
-    top: 14px;
-    left: 14px;
-    right: 14px;
-    bottom: 58px;
-    width: calc(100% - 28px);
-    height: calc(100% - 72px);
-    display: block;
-    background: #fff;
-}
-
-.portal-pdf-modal-close {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: rgba(255,255,255,0.85);
-    border: none;
-    border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    line-height: 1;
-    color: #444;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    transition: color 0.2s, background 0.2s;
-    z-index: 10;
-}
-
-.portal-pdf-modal-close:hover {
-    color: #111;
-    background: #fff;
-}
-
-@media (max-width: 600px) {
-    .portal-pdf-modal {
-        width: 96vw;
-    }
-
-    .portal-pdf-modal-close {
-        display: none;
-    }
 }
 
 .invoice-items-panel {
@@ -1437,4 +1356,13 @@ input[type="number"] {
         font-size: 12px;
         padding: 8px 10px;
     }
+}
+
+.portal-pdf-modal-backdrop {
+    z-index: 3500;
+}
+
+.portal-pdf-modal canvas {
+    bottom: 58px;
+    height: calc(100% - 72px);
 }

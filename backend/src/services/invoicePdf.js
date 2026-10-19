@@ -11,7 +11,7 @@ const serviceTemplatePath = path.join(projectRoot, 'invoice_template', 'blank_se
 const billingTemplatePath = path.join(projectRoot, 'invoice_template', 'blank_billing_invoice.pdf');
 const boldFontPath = path.join(projectRoot, 'fonts', 'stix-two-text-bold.ttf');
 const boldItalicFontPath = path.join(projectRoot, 'fonts', 'stix-two-text-bold-italic.ttf');
-const invoicesDir = path.join(projectRoot, 'invoices');
+const invoicesDir = process.env.STICKMAN_INVOICES_DIR || path.join(projectRoot, 'invoices');
 
 const FONT_SIZE = 16;
 const PAGE_WIDTH = 612;
