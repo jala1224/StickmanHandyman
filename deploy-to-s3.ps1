@@ -48,6 +48,7 @@ try {
         'load-components.js',
         'projects.json',
         'images',
+        'css',
         'invoice_template',
         'fonts'
     )
@@ -82,6 +83,7 @@ try {
         '--include', 'projects.json',
         '--include', 'images/*',
         '--include', 'images/icons/*',
+        '--include', 'css/*.css',
         '--include', 'invoice_template/*',
         '--include', 'fonts/*'
     )

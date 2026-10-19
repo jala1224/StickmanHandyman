@@ -1,0 +1,177 @@
+.nav-links a, .logo-bubble a {
+    color: #ccc;
+    text-decoration: none;
+}
+.nav-links a:hover, .logo-bubble a:hover {
+    color: white;
+}
+.nav-links a:visited, .logo-bubble a:visited,
+.nav-links a:active, .logo-bubble a:active {
+    color: #ccc;
+}
+.nav-links a:visited:hover, .logo-bubble a:visited:hover,
+.nav-links a:active:hover, .logo-bubble a:active:hover {
+    color: white;
+}
+
+.portal-activity-panel {
+    margin-top: 18px;
+}
+
+.portal-activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.portal-activity-item {
+    border: 1px solid rgba(34, 34, 34, 0.16);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+}
+
+.portal-activity-item strong {
+    display: block;
+    color: #222;
+}
+
+.portal-activity-meta {
+    margin: 4px 0 0;
+    color: #555;
+    font-size: 0.94rem;
+}
+
+.portal-inline-actions {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.portal-inline-message {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.portal-pdf-modal-backdrop.hidden {
+    display: none;
+}
+
+.portal-pdf-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.portal-pdf-modal {
+    background: #fff;
+    border-radius: 12px;
+    width: min(850px, 94vw);
+    aspect-ratio: 8.5 / 11;
+    max-height: 92vh;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    overflow: hidden;
+    position: relative;
+    padding: 14px;
+    box-sizing: border-box;
+}
+
+.portal-pdf-modal canvas {
+    position: absolute;
+    inset: 14px;
+    width: calc(100% - 28px);
+    height: calc(100% - 28px);
+    display: block;
+    background: #fff;
+}
+
+.portal-pdf-modal-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(255,255,255,0.85);
+    border: none;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    line-height: 1;
+    color: #444;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    transition: color 0.2s, background 0.2s;
+    z-index: 10;
+}
+
+.portal-pdf-modal-close:hover {
+    color: #111;
+    background: #fff;
+}
+
+@media (max-width: 600px) {
+    .portal-pdf-modal {
+        width: 96vw;
+    }
+
+    .portal-pdf-modal-close {
+        display: none;
+    }
+}
+
+.portal-inline-message-success { color: #166534; }
+.portal-inline-message-error { color: #b91c1c; }
+
+.portal-activation-panel {
+    margin-top: 12px;
+}
+
+.portal-signin-panel {
+    margin-top: 12px;
+}
+
+.portal-activation-panel h3 {
+    margin: 0 0 6px;
+    color: #222;
+}
+
+.portal-signin-panel h3 {
+    margin: 0 0 6px;
+    color: #222;
+    font-size: 1rem;
+}
+
+.portal-fallback {
+    margin-top: 14px;
+}
+
+.portal-fallback .portal-button {
+    display: inline-block;
+    text-decoration: none;
+}
+
+#portal-found-panel .portal-button,
+#portal-found-fallback .portal-button {
+    background: rgba(30, 30, 30, 0.9);
+    border-color: rgba(30, 30, 30, 0.9);
+    color: #fff;
+}
+
+#portal-found-panel .portal-button:hover,
+#portal-found-fallback .portal-button:hover {
+    background: #1e1e1e;
+    border-color: #1e1e1e;
+    color: #fff;
+}
