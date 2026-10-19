@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./.github/hooks/scripts/reset-validation-flag.ps1",
+        "command": "pwsh ./.github/hooks/scripts/reset-validation-flag.ps1",
+        "timeout": 10
+      }
+    ],
+    "PostToolUse": [
+      {
+        "type": "command",
+        "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./.github/hooks/scripts/track-validation.ps1",
+        "command": "pwsh ./.github/hooks/scripts/track-validation.ps1",
+        "timeout": 10
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./.github/hooks/scripts/enforce-validation-before-stop.ps1",
+        "command": "pwsh ./.github/hooks/scripts/enforce-validation-before-stop.ps1",
+        "timeout": 10
+      }
+    ]
+  }
+}

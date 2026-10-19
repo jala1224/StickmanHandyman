@@ -1,0 +1,24 @@
+[Unit]
+Description=Stickman Handyman backend API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/stickman-handyman-website/backend
+EnvironmentFile=/opt/stickman-handyman-website/backend/.env
+Environment=NODE_ENV=production
+Environment="CORS_ALLOWED_ORIGINS=https://stickman-handyman.com,https://www.stickman-handyman.com"
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/stickman-handyman-website/backend/data /opt/stickman-handyman-website/invoices
+
+[Install]
+WantedBy=multi-user.target

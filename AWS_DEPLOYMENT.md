@@ -25,12 +25,13 @@ Deploy these files and folders:
 1. `home.html`
 2. `gallery.html`
 3. `contact.html`
-4. `nav.html`
-5. `footer.html`
-6. `styles.css`
-7. `load-components.js`
-8. `projects.json`
-9. `images/`
+4. `portal.html`
+5. `nav.html`
+6. `footer.html`
+7. `styles.css`
+8. `load-components.js`
+9. `projects.json`
+10. `images/`
 
 Do not deploy these folders and files:
 

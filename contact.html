@@ -17,8 +17,8 @@
     <meta charset="UTF-8">
     <title>Contact | Stickman Handyman</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="styles.css"></noscript>
+    <link rel="preload" href="styles.css?v=20261007" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css?v=20261007"></noscript>
     <style>
         /* Critical link styles to prevent flash */
         .nav-links a, .logo-bubble a {
@@ -52,32 +52,16 @@
     <nav class="nav-links">
         <a href="home.html">Home</a>
         <a href="gallery.html">Gallery</a>
+        <a href="maintenance-packages.html">Maintenance Packages</a>
+        <a href="portal-find.html">Account</a>
         <a href="contact.html" class="current-link">Contact Us</a>
     </nav>
 </div>
 
 <div class="content">
-    <section class="contact-layout">
-        <div class="contact-left">
-            <article class="contact-panel">
-                <h2>Contact Us</h2>
-                <p>Boulder, Colorado</p>
-                <p>
-                    Call or Text: <a href="tel:7205924438">(720) 592-4438</a>
-                </p>
-                <p>
-                    Email: <a href="mailto:stickman_handyman@outlook.com">stickman_handyman@outlook.com</a>
-                </p>
-            </article>
-
-            <article class="contact-panel">
-                <h2>Availability</h2>
-                <p>Monday &ndash; Saturday</p>
-            </article>
-        </div>
-
-        <article class="contact-panel">
-            <h1>About Me</h1>
+    <section class="contact-layout page-heading-section">
+        <article class="contact-panel contact-about">
+            <h1 class="page-primary-title">About Me</h1>
             <p>
                 My name is Jacob Lancaster, and I am the owner of Stickman Handyman. With 6 years of hands-on experience, I have built my business around reliable service, consistent workmanship, and clear communication.
             </p>
@@ -88,13 +72,36 @@
                 Looking ahead, I plan to grow Stickman Handyman into a full-service home improvement company — expanding the team, taking on larger renovation projects, and continuing to serve the northern Colorado community with the same quality and reliability that has defined my work from day one.
             </p>
         </article>
+
+        <div class="contact-details">
+            <article class="contact-panel">
+                <h2>Contact Us</h2>
+                <p>Superior, Colorado</p>
+                <p>
+                    Call or Text: <a href="tel:7205924438">(720) 592-4438</a>
+                </p>
+                <p>
+                    Email: <a href="mailto:stickman_handyman@outlook.com">stickman_handyman@outlook.com</a>
+                </p>
+            </article>
+
+            <article class="contact-panel">
+                <h2>Availability</h2>
+                <p>Monday &ndash; Friday</p>
+            </article>
+        </div>
     </section>
 </div>
 
 <footer>
     <p>&copy; 2026 Stickman Handyman. All rights reserved.</p>
 </footer>
+<script src="portal-shared.js"></script>
 <script>
+    if (window.StickmanPortal && typeof window.StickmanPortal.applyAccountNavDestination === 'function') {
+        window.StickmanPortal.applyAccountNavDestination();
+    }
+
     const toggleButton = document.querySelector('.menu-toggle');
     const topnav = document.querySelector('.topnav');
 

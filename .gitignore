@@ -12,3 +12,23 @@ Desktop.ini
 *.log
 *.tmp
 *.temp
+
+# Backend runtime files
+backend/node_modules/
+backend/.env
+backend/data/contractors.json
+backend/data/business.json
+backend/data/client-users.json
+
+# Private credentials and generated business records
+.env
+.env.*
+!.env.example
+*.pem
+*.ppk
+*.key
+backend/data/
+Invoices/
+
+# Local validation state
+.github/hooks/.validation-ran.flag

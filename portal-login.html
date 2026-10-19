@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18054809084"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'AW-18054809084');
+    </script>
+    <meta charset="UTF-8">
+    <title>Sign In | Stickman Handyman</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload" href="styles.css?v=20261007" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css?v=20261007"></noscript>
+    <style>
+        .nav-links a, .logo-bubble a {
+            color: #ccc;
+            text-decoration: none;
+        }
+        .nav-links a:hover, .logo-bubble a:hover {
+            color: white;
+        }
+        .nav-links a:visited, .logo-bubble a:visited,
+        .nav-links a:active, .logo-bubble a:active {
+            color: #ccc;
+        }
+        .nav-links a:visited:hover, .logo-bubble a:visited:hover,
+        .nav-links a:active:hover, .logo-bubble a:active:hover {
+            color: white;
+        }
+    </style>
+</head>
+<body class="portal-page">
+<div class="topnav">
+    <div class="logo-bubble">
+        <button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+        </button>
+        <a href="home.html"> Stickman Handyman </a>
+    </div>
+    <nav class="nav-links">
+        <a href="home.html">Home</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="maintenance-packages.html">Maintenance Packages</a>
+        <a href="portal-find.html" class="current-link">Account</a>
+        <a href="contact.html">Contact Us</a>
+    </nav>
+</div>
+
+<div class="content">
+    <section class="portal-layout-single portal-entry-layout page-heading-section">
+        <article class="portal-panel">
+            <h1 class="page-primary-title">Sign in</h1>
+            <form id="portal-login-form" class="portal-form">
+                <label for="portal-email">Email</label>
+                <input id="portal-email" name="email" type="email" autocomplete="email" required>
+
+                <label for="portal-password">Password</label>
+                <input id="portal-password" name="password" type="password" autocomplete="current-password" required>
+
+                <button type="submit" class="portal-button">Sign In</button>
+            </form>
+            <p class="portal-link-row">
+                Need to find or activate your account?
+                <a class="portal-inline-link" href="portal-find.html">Go to account lookup.</a>
+            </p>
+            <p id="portal-login-message" class="portal-message" aria-live="polite"></p>
+        </article>
+    </section>
+</div>
+
+<footer>
+    <p>&copy; 2026 Stickman Handyman. All rights reserved.</p>
+</footer>
+<script src="portal-shared.js?v=20261007"></script>
+<script>
+    const portal = window.StickmanPortal;
+    portal.initTopnav();
+
+    const loginForm = document.getElementById('portal-login-form');
+    const loginMessage = document.getElementById('portal-login-message');
+
+    const params = new URLSearchParams(window.location.search);
+    const reason = params.get('reason');
+    if (reason === 'client-session-required') {
+        setMessage('Sign in to view your client portal.', true);
+    } else if (reason === 'admin-session-required') {
+        setMessage('Sign in to view the admin portal.', true);
+    } else if (reason === 'session-expired') {
+        setMessage('Your session expired. Sign in again.', true);
+    }
+
+    const apiBase = portal.readApiBase();
+    if (apiBase) {
+        if (portal.readAdminToken()) {
+            window.location.replace('portal-admin.html');
+        } else if (portal.readClientToken()) {
+            window.location.replace('portal-client.html');
+        }
+    }
+
+    loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        setMessage('Signing in...', false);
+
+        const resolvedApiBase = portal.readApiBase();
+        if (!resolvedApiBase) {
+            setMessage('Unable to determine the backend address for this site.', true);
+            return;
+        }
+
+        const formData = new FormData(loginForm);
+        try {
+            const result = await portal.signInShared(resolvedApiBase, {
+                email: String(formData.get('email') || '').trim(),
+                password: String(formData.get('password') || ''),
+            });
+
+            if (result.role === 'admin') {
+                window.location.href = 'portal-admin.html';
+                return;
+            }
+
+            window.location.href = 'portal-client.html';
+        } catch (error) {
+            setMessage(error.message || 'Unable to sign in right now.', true);
+        }
+    });
+
+    function setMessage(message, isError) {
+        loginMessage.textContent = message;
+        loginMessage.className = isError ? 'portal-message portal-message-error' : 'portal-message portal-message-success';
+    }
+</script>
+</body>
+</html>

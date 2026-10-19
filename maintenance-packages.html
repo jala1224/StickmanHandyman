@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Compare Stickman Handyman single-home and portfolio maintenance packages.">
+    <title>Maintenance Packages | Stickman Handyman</title>
+    <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css"></noscript>
+    <style>
+        .nav-links a, .logo-bubble a { color: #ccc; text-decoration: none; }
+        .nav-links a:hover, .logo-bubble a:hover { color: #fff; }
+        .packages-page-body {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+        .packages-page {
+            width: min(1080px, calc(100% - 40px));
+            flex: 1 0 auto;
+            margin: 0 auto;
+            padding: 30px 0 64px;
+        }
+        .packages-heading {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+        .packages-heading h1 {
+            margin: 0;
+            color: #1f2937;
+            line-height: 1.1;
+        }
+        .packages-heading p {
+            margin: 9px 0 0;
+            color: #6b7280;
+            font-size: 15px;
+        }
+        .package-switcher {
+            display: inline-flex;
+            gap: 4px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 9px;
+            background: rgba(30, 30, 30, 0.9);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.16);
+            backdrop-filter: blur(8px);
+        }
+        .package-switcher button {
+            min-height: 42px;
+            padding: 0 18px;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            color: #ccc;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .package-switcher button:hover {
+            color: #fff;
+        }
+        .package-switcher button[aria-selected="true"] {
+            background: rgba(255, 255, 255, 0.16);
+            color: #fff;
+        }
+        .package-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .package-card {
+            min-width: 0;
+            padding: 22px;
+            border: 1.5px solid #ececec;
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 4px 24px 0 rgba(30, 30, 60, 0.10), 0 1.5px 6px 0 rgba(0, 0, 0, 0.04);
+            transition: transform 0.22s cubic-bezier(.4,0,.2,1), box-shadow 0.22s cubic-bezier(.4,0,.2,1), border-color 0.22s;
+        }
+        .package-card:hover {
+            transform: translateY(-7px) scale(1.025);
+            border-color: #d1d1d1;
+            box-shadow: 0 8px 32px 0 rgba(30, 30, 60, 0.16), 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+        }
+        .package-card h2 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 20px;
+        }
+        .package-price {
+            margin: 14px 0 4px;
+            color: #111827;
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .package-price span {
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .package-retainer {
+            min-height: 22px;
+            margin: 0 0 18px;
+            color: #4b5563;
+            font-size: 14px;
+        }
+        .package-facts {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 11px 12px;
+            padding: 16px 0;
+            border-top: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+        }
+        .package-facts dt { color: #6b7280; }
+        .package-facts dd { margin: 0; color: #1f2937; font-weight: 600; text-align: right; }
+        .package-features {
+            display: grid;
+            gap: 11px;
+            margin: 17px 0 0;
+            padding: 0;
+            list-style: none;
+            font-size: 14px;
+        }
+        .package-features li {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: #4b5563;
+        }
+        .feature-status { color: #1f2937; font-weight: 600; white-space: nowrap; }
+        .feature-status.is-included { color: #166534; }
+        @media (max-width: 760px) {
+            .packages-page { width: min(100% - 28px, 560px); padding: 30px 0 44px; }
+            .packages-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
+            .package-grid { grid-template-columns: 1fr; gap: 10px; }
+            .package-card { padding: 18px; }
+            .package-switcher { display: grid; grid-template-columns: 1fr 1fr; width: 100%; box-sizing: border-box; }
+            .package-switcher button { padding: 0 8px; }
+        }
+    </style>
+</head>
+<body class="packages-page-body">
+    <div id="nav-placeholder"></div>
+
+    <main class="packages-page page-heading-section">
+        <div class="packages-heading">
+            <div>
+                <h1 class="page-primary-title">Maintenance Packages</h1>
+                <p>Compare monthly plans and included services.</p>
+            </div>
+        </div>
+
+        <div class="package-switcher" role="tablist" aria-label="Package type">
+            <button type="button" role="tab" id="tab-single-home" aria-controls="package-grid" aria-selected="true" data-package-type="single-home">Single Home</button>
+            <button type="button" role="tab" id="tab-portfolio" aria-controls="package-grid" aria-selected="false" data-package-type="portfolio">Portfolio</button>
+        </div>
+        <section id="package-grid" class="package-grid" aria-live="polite"></section>
+    </main>
+
+    <div id="footer-placeholder"></div>
+    <script src="load-components.js"></script>
+    <script>
+        const packageData = {
+            'single-home': [
+                { level: 'Basic', monthly: 160, retainer: '2 hours', rollover: '—', discount: '—', priority: false, annual: false, quarterly: false, onCall: false, tenant: false },
+                { level: 'Pro', monthly: 200, retainer: '2 hours', rollover: '1 hour', discount: '5%', priority: true, annual: true, quarterly: false, onCall: false, tenant: false },
+                { level: 'Premium', monthly: 350, retainer: '4 hours', rollover: '2 hours', discount: '10%', priority: true, annual: true, quarterly: true, onCall: true, tenant: false },
+            ],
+            portfolio: [
+                { level: 'Basic', monthly: 300, retainer: '4-hour pool', rollover: '—', discount: '—', priority: false, annual: false, quarterly: false, onCall: false, tenant: false },
+                { level: 'Pro', monthly: 400, retainer: '6-hour pool', rollover: '2 hours', discount: '5%', priority: true, annual: true, quarterly: false, onCall: false, tenant: true },
+                { level: 'Premium', monthly: 700, retainer: '10-hour pool', rollover: '4 hours', discount: '10%', priority: true, annual: true, quarterly: true, onCall: true, tenant: true },
+            ],
+        };
+        const featureLabels = [
+            ['priority', 'Priority scheduling'],
+            ['annual', 'Annual home inspection'],
+            ['quarterly', 'Quarterly home inspection'],
+            ['onCall', 'On-call service'],
+            ['tenant', 'Tenant coordination'],
+        ];
+        const packageGrid = document.getElementById('package-grid');
+        const packageTabs = Array.from(document.querySelectorAll('[data-package-type]'));
+
+        function renderPackages(type) {
+            packageGrid.innerHTML = packageData[type].map((plan) => `
+                <article class="package-card" data-level="${plan.level.toLowerCase()}">
+                    <h2>${plan.level}</h2>
+                    <p class="package-price">$${plan.monthly}<span> / month</span></p>
+                    <p class="package-retainer">${plan.retainer} included</p>
+                    <dl class="package-facts">
+                        <dt>Rollover</dt><dd>${plan.rollover}</dd>
+                        <dt>Service discount</dt><dd>${plan.discount}</dd>
+                    </dl>
+                    <ul class="package-features">
+                        ${featureLabels.map(([key, label]) => `
+                            <li><span>${label}</span><span class="feature-status ${plan[key] ? 'is-included' : ''}">${plan[key] ? 'Included' : '—'}</span></li>
+                        `).join('')}
+                    </ul>
+                </article>
+            `).join('');
+        }
+
+        packageTabs.forEach((tab) => tab.addEventListener('click', () => {
+            packageTabs.forEach((item) => item.setAttribute('aria-selected', String(item === tab)));
+            renderPackages(tab.dataset.packageType);
+        }));
+        renderPackages('single-home');
+    </script>
+</body>
+</html>

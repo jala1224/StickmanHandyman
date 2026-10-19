@@ -33,12 +33,23 @@ try {
         'home.html',
         'gallery.html',
         'contact.html',
+        'portal.html',
+        'admin.html',
+        'portal-find.html',
+        'portal-found.html',
+        'portal-login.html',
+        'portal-client.html',
+        'portal-admin.html',
+        'portal-shared.js',
+        'maintenance-packages.html',
         'nav.html',
         'footer.html',
         'styles.css',
         'load-components.js',
         'projects.json',
-        'images'
+        'images',
+        'invoice_template',
+        'fonts'
     )
 
     $missingPaths = $requiredPaths | Where-Object { -not (Test-Path $_) }
@@ -55,13 +66,24 @@ try {
         '--include', 'home.html',
         '--include', 'gallery.html',
         '--include', 'contact.html',
+        '--include', 'portal.html',
+        '--include', 'admin.html',
+        '--include', 'portal-find.html',
+        '--include', 'portal-found.html',
+        '--include', 'portal-login.html',
+        '--include', 'portal-client.html',
+        '--include', 'portal-admin.html',
+        '--include', 'portal-shared.js',
+        '--include', 'maintenance-packages.html',
         '--include', 'nav.html',
         '--include', 'footer.html',
         '--include', 'styles.css',
         '--include', 'load-components.js',
         '--include', 'projects.json',
         '--include', 'images/*',
-        '--include', 'images/icons/*'
+        '--include', 'images/icons/*',
+        '--include', 'invoice_template/*',
+        '--include', 'fonts/*'
     )
 
     $syncArgs = @(

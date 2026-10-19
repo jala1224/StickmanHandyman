@@ -1,0 +1,4095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Portal | Stickman Handyman</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload" href="styles.css?v=20261007" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css?v=20261007"></noscript>
+    <style>
+        @font-face {
+            font-family: 'InvoiceSTIXBold';
+            font-style: normal;
+            font-weight: 700;
+            font-display: block;
+            src: url('fonts/stix-two-text-bold.ttf?v=2') format('truetype');
+        }
+
+        @font-face {
+            font-family: 'InvoiceSTIXBoldItalic';
+            font-style: italic;
+            font-weight: 700;
+            font-display: block;
+            src: url('fonts/stix-two-text-bold-italic.ttf?v=2') format('truetype');
+        }
+
+        .nav-links a, .logo-bubble a { color: #ccc; text-decoration: none; }
+        .nav-links a:hover, .logo-bubble a:hover { color: white; }
+        .nav-links a:visited, .logo-bubble a:visited,
+        .nav-links a:active, .logo-bubble a:active { color: #ccc; }
+        .nav-links a:visited:hover, .logo-bubble a:visited:hover,
+        .nav-links a:active:hover, .logo-bubble a:active:hover { color: white; }
+
+        .admin-page .content { padding: 0 0 40px 0; }
+
+        .admin-layout {
+            width: 90%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .admin-summary-strip {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .admin-stat {
+            background: #f8f9fa;
+            border: 1px solid rgba(34,34,34,0.08);
+            border-radius: 14px;
+            padding: 22px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .admin-stat-label {
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        .admin-stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1;
+        }
+
+        .admin-stat-sub {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .admin-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            gap: 12px;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid rgba(34,34,34,0.12);
+            min-width: 0;
+        }
+
+        .admin-tab-btn {
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 10px 18px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            border-radius: 0;
+        }
+
+        .admin-tab-btn:hover {
+            color: #1f2937;
+        }
+
+        .admin-tab-btn.active {
+            color: #1f2937;
+            border-bottom-color: #1f2937;
+        }
+
+        .admin-tab-panel[hidden] {
+            display: none;
+        }
+
+        .admin-filter-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        .admin-filter-bar select,
+        .contractor-tax-filters select {
+            box-sizing: border-box;
+            width: 180px;
+            min-width: 180px;
+            height: 42px;
+            border: 1px solid rgba(34,34,34,0.18);
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f2937;
+            background: #fff;
+        }
+
+        .admin-section-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .admin-table-wrapper {
+            overflow-x: hidden;
+            overflow-y: hidden;
+            border-radius: 14px;
+            border: 1px solid rgba(34,34,34,0.08);
+            overscroll-behavior-inline: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .admin-table thead th:first-child { width: 18%; }
+        .admin-table thead th:nth-child(2) { width: 12%; }
+
+        #admin-tab-panel-clients .admin-table,
+        #admin-tab-panel-invoices .admin-table {
+            table-layout: fixed;
+        }
+
+        #admin-tab-panel-clients .admin-table thead th:nth-child(1) { width: 18%; }
+        #admin-tab-panel-clients .admin-table thead th:nth-child(2) { width: 12%; }
+        #admin-tab-panel-clients .admin-table thead th:nth-child(3) { width: 25%; }
+        #admin-tab-panel-clients .admin-table thead th:nth-child(4) { width: 5%; }
+        #admin-tab-panel-clients .admin-table thead th:nth-child(5) { width: 15%; }
+        #admin-tab-panel-clients .admin-table thead th:nth-child(6) { width: 1%; }
+
+        #admin-tab-panel-invoices .admin-table thead th:nth-child(1) { width: 18%; }
+        #admin-tab-panel-invoices .admin-table thead th:nth-child(2) { width: 12%; }
+        #admin-tab-panel-invoices .admin-table thead th:nth-child(3) { width: 22%; }
+        #admin-tab-panel-invoices .admin-table thead th:nth-child(4) { width: 10%; }
+        #admin-tab-panel-invoices .admin-table thead th:nth-child(5) { width: 13%; }
+        #admin-tab-panel-clients .admin-table thead th:nth-child(3),
+        #admin-tab-panel-clients .admin-table thead th:nth-child(4),
+        #admin-tab-panel-clients .admin-table thead th:nth-child(5),
+        #admin-tab-panel-invoices .admin-table thead th:nth-child(3),
+        #admin-tab-panel-invoices .admin-table thead th:nth-child(4),
+        #admin-tab-panel-invoices .admin-table thead th:nth-child(5) {
+            width: auto;
+        }
+
+        #admin-tab-panel-clients .admin-table thead th:nth-child(6),
+        #admin-tab-panel-invoices .admin-table thead th:nth-child(6) {
+            width: 215px;
+        }
+
+        #admin-tab-panel-contractors .admin-table thead th:nth-child(1) { width: 18%; }
+        #admin-tab-panel-contractors .admin-table thead th:nth-child(2) { width: 12%; }
+        #admin-tab-panel-contractors .admin-table thead th:nth-child(3),
+        #admin-tab-panel-contractors .admin-table thead th:nth-child(4),
+        #admin-tab-panel-contractors .admin-table thead th:nth-child(5),
+        #admin-tab-panel-contractors .admin-table thead th:nth-child(6) {
+            width: auto;
+        }
+        #admin-tab-panel-contractors .admin-table thead th:nth-child(7) { width: 135px; }
+
+        #admin-tab-panel-clients .admin-table-wrapper,
+        #admin-tab-panel-invoices .admin-table-wrapper {
+            overflow-x: hidden;
+        }
+
+        #admin-tab-panel-clients .admin-table,
+        #admin-tab-panel-invoices .admin-table {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .contract-status-indicators {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+            vertical-align: middle;
+        }
+
+        .admin-table thead th {
+            background: #f3f4f6;
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6b7280;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .admin-table tbody tr {
+            height: 48px;
+            border-top: 1px solid rgba(34,34,34,0.06);
+        }
+
+        .admin-table tbody tr:hover {
+            background: #fafafa;
+        }
+
+        .admin-table td:last-child {
+            white-space: nowrap;
+        }
+
+        .admin-table td {
+            padding: 7px 10px;
+            color: #374151;
+            vertical-align: middle;
+            line-height: 1.3;
+            white-space: nowrap;
+        }
+
+        .admin-table td:not(:last-child) {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #admin-tab-panel-clients .admin-table th:nth-child(4),
+        #admin-tab-panel-clients .admin-table td:nth-child(4) {
+            text-align: center;
+        }
+
+        #admin-tab-panel-contracts .admin-table th:nth-child(3),
+        #admin-tab-panel-contracts .admin-table th:nth-child(4),
+        #admin-tab-panel-contracts .admin-table th:nth-child(5) {
+            width: auto;
+        }
+
+        #admin-tab-panel-contracts .admin-table th:nth-child(6) { width: 190px; }
+
+        #admin-tab-panel-contracts .admin-table td:last-child {
+            white-space: normal;
+        }
+
+        .contract-table-metadata {
+            display: grid;
+            gap: 3px;
+            font-size: 13px;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .contract-table-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .admin-table td .admin-btn-sm {
+            padding: 3px 5px;
+            font-size: 11px;
+        }
+
+        .client-table-actions,
+        .invoice-table-actions {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 3px;
+            width: 100%;
+            white-space: nowrap;
+        }
+
+        #admin-tab-panel-clients .client-table-actions .admin-btn,
+        #admin-tab-panel-invoices .invoice-table-actions .admin-btn {
+            flex: 0 0 auto;
+            padding: 3px 4px;
+            font-size: 11px;
+            line-height: 1.2;
+        }
+
+        #admin-tab-panel-clients .client-table-actions {
+            gap: 2px;
+        }
+
+        #admin-tab-panel-clients .client-table-actions .admin-btn {
+            padding-right: 2px;
+            padding-left: 2px;
+        }
+
+        #admin-tab-panel-invoices .admin-table td:last-child {
+            white-space: normal;
+        }
+
+        #admin-tab-panel-invoices .invoice-table-actions {
+            gap: 2px;
+        }
+
+        #admin-tab-panel-invoices .invoice-table-actions .admin-btn {
+            padding-right: 2px;
+            padding-left: 2px;
+        }
+
+        .invoice-table-actions .admin-btn {
+            flex: 0 0 auto;
+        }
+
+        .mobile-record-list {
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            #admin-tab-panel-clients .admin-table-wrapper,
+            #admin-tab-panel-invoices .admin-table-wrapper {
+                display: none;
+            }
+
+            #admin-tab-panel-clients .mobile-record-list,
+            #admin-tab-panel-invoices .mobile-record-list {
+                display: block;
+            }
+        }
+
+        .mobile-record-card {
+            overflow: hidden;
+            border: 1px solid rgba(34,34,34,0.1);
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .mobile-record-card + .mobile-record-card {
+            margin-top: 8px;
+        }
+
+        .mobile-record-card summary {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 4px 12px;
+            align-items: center;
+            padding: 12px;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .mobile-record-card summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .mobile-record-card summary::after {
+            content: '+';
+            grid-column: 2;
+            grid-row: 1 / span 2;
+            color: #6b7280;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .mobile-record-card.mobile-record-card-with-status summary {
+            grid-template-columns: minmax(0, 1fr) 20px;
+            grid-template-rows: auto auto;
+        }
+
+        .mobile-record-heading {
+            display: flex;
+            grid-column: 1;
+            grid-row: 1;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .mobile-record-card.mobile-record-card-with-status .mobile-record-title {
+            flex: 1 1 auto;
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .mobile-record-card.mobile-record-card-with-status .mobile-record-subtitle {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        .mobile-record-card.mobile-record-card-with-status .mobile-record-summary-value {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .mobile-record-card.mobile-record-card-with-status summary::after {
+            grid-column: 2;
+            grid-row: 1;
+            justify-self: end;
+        }
+
+        .mobile-record-card[open] summary::after {
+            content: '\2212';
+        }
+
+        .mobile-record-title {
+            min-width: 0;
+            color: #1f2937;
+            font-size: 14px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .mobile-record-subtitle {
+            min-width: 0;
+            color: #6b7280;
+            font-size: 12px;
+            overflow-wrap: anywhere;
+        }
+
+        .mobile-record-summary-value {
+            grid-column: 1;
+            color: #111827;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .mobile-record-details {
+            display: grid;
+            grid-template-columns: minmax(86px, 0.8fr) minmax(0, 1.2fr);
+            gap: 8px 12px;
+            padding: 0 12px 12px;
+            font-size: 12px;
+        }
+
+        .mobile-record-label {
+            color: #6b7280;
+        }
+
+        .mobile-record-value {
+            min-width: 0;
+            color: #374151;
+            overflow-wrap: anywhere;
+        }
+
+        .mobile-record-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(34,34,34,0.08);
+        }
+
+        .mobile-record-actions .admin-btn {
+            min-height: 36px;
+        }
+
+        .mobile-payment-check {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 36px;
+            padding: 0 8px;
+            color: #374151;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .mobile-record-list {
+            display: none;
+        }
+
+        .mobile-record-card {
+            border: 1px solid rgba(34,34,34,0.1);
+            border-radius: 10px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .mobile-record-card + .mobile-record-card {
+            margin-top: 8px;
+        }
+
+        .mobile-record-card summary {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 4px 12px;
+            padding: 12px;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .mobile-record-card summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .mobile-record-card summary::after {
+            content: '+';
+            grid-column: 2;
+            grid-row: 1 / span 2;
+            color: #6b7280;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .mobile-record-card[open] summary::after {
+            content: '\2212';
+        }
+
+        .mobile-record-title {
+            min-width: 0;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1f2937;
+            overflow-wrap: anywhere;
+        }
+
+        .mobile-record-subtitle {
+            min-width: 0;
+            color: #6b7280;
+            font-size: 12px;
+            overflow-wrap: anywhere;
+        }
+
+        .mobile-record-summary-value {
+            grid-column: 1;
+            color: #111827;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .mobile-record-details {
+            display: grid;
+            grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.2fr);
+            gap: 8px 12px;
+            padding: 0 12px 12px;
+            font-size: 12px;
+        }
+
+        .mobile-record-label {
+            color: #6b7280;
+        }
+
+        .mobile-record-value {
+            min-width: 0;
+            color: #374151;
+            overflow-wrap: anywhere;
+        }
+
+        .mobile-record-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(34,34,34,0.08);
+        }
+
+        .mobile-record-actions .admin-btn {
+            min-height: 36px;
+        }
+
+        .admin-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-active, .badge-paid { background: #dcfce7; color: #166534; }
+        .badge-sent { background: #dbeafe; color: #1e40af; }
+        .badge-draft { background: #f3f4f6; color: #4b5563; }
+        .badge-overdue { background: #fee2e2; color: #991b1b; }
+        .badge-void { background: #f3f4f6; color: #9ca3af; }
+        .badge-inactive, .badge-cancelled { background: #fef3c7; color: #92400e; }
+        .badge-ongoing { background: #e0f2fe; color: #075985; }
+
+        .admin-empty {
+            padding: 24px 16px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 15px;
+        }
+
+        .admin-btn {
+            border: none;
+            border-radius: 10px;
+            padding: 9px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #1f2937;
+            color: #fff;
+            transition: background 0.18s;
+        }
+
+        .admin-btn:hover { background: #111827; }
+
+        .admin-btn-sm {
+            padding: 5px 12px;
+            font-size: 13px;
+            border-radius: 8px;
+        }
+
+        .admin-btn-ghost {
+            background: transparent;
+            color: #1f2937;
+            border: 1px solid rgba(34,34,34,0.18);
+        }
+
+        .admin-btn-ghost:hover { background: #f3f4f6; }
+
+        .admin-btn-remove {
+            color: #b91c1c;
+            border-color: rgba(185, 28, 28, 0.3);
+        }
+
+        .admin-btn-remove:hover {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+
+        .admin-header-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .admin-greeting { font-size: 18px; color: #6b7280; }
+
+        .admin-message { min-height: 22px; font-size: 14px; margin-top: 10px; }
+        .admin-message-error { color: #b91c1c; }
+        .admin-message-success { color: #166534; }
+
+        .admin-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        .admin-modal {
+            background: #fff;
+            border-radius: 18px;
+            padding: 32px;
+            width: 480px;
+            max-width: 94vw;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .admin-modal-wide {
+            width: min(1180px, 96vw);
+            max-width: 96vw;
+        }
+
+        .admin-modal h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #111827;
+            margin: 0 0 4px 0;
+        }
+
+        .admin-form { display: grid; gap: 12px; }
+
+        .admin-form label {
+            display: grid;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .admin-form label.hidden {
+            display: none;
+        }
+
+        .admin-form label.admin-checkbox-label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+        }
+
+        .admin-form label.invoice-item-inline-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #4b5563;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .admin-form input,
+        .admin-form select {
+            width: 100%;
+            border: 1px solid rgba(34,34,34,0.18);
+            border-radius: 10px;
+            padding: 11px 13px;
+            font-size: 15px;
+            background: #fff;
+            color: #111827;
+            box-sizing: border-box;
+        }
+
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+
+        .admin-form input:focus,
+        .admin-form select:focus {
+            outline: 2px solid rgba(34,34,34,0.12);
+            border-color: rgba(34,34,34,0.4);
+        }
+
+        .admin-modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 6px;
+        }
+
+        .portal-pdf-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 3500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .portal-pdf-modal {
+            background: #fff;
+            border-radius: 12px;
+            width: min(850px, 94vw);
+            aspect-ratio: 8.5 / 11;
+            max-height: 92vh;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            overflow: hidden;
+            position: relative;
+            padding: 14px;
+            box-sizing: border-box;
+        }
+
+        .portal-pdf-modal-download {
+            position: absolute;
+            left: 14px;
+            bottom: 14px;
+        }
+
+        .portal-pdf-modal canvas {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            right: 14px;
+            bottom: 58px;
+            width: calc(100% - 28px);
+            height: calc(100% - 72px);
+            display: block;
+            background: #fff;
+        }
+
+        .portal-pdf-modal-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255,255,255,0.85);
+            border: none;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            line-height: 1;
+            color: #444;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            transition: color 0.2s, background 0.2s;
+            z-index: 10;
+        }
+
+        .portal-pdf-modal-close:hover {
+            color: #111;
+            background: #fff;
+        }
+
+        @media (max-width: 600px) {
+            .portal-pdf-modal {
+                width: 96vw;
+            }
+
+            .portal-pdf-modal-close {
+                display: none;
+            }
+        }
+
+        .invoice-items-panel {
+            display: grid;
+            grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
+            column-gap: 16px;
+            row-gap: 6px;
+            align-items: start;
+            width: 100%;
+        }
+
+        .contract-custom-package-fields {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            padding: 14px;
+            border: 1px solid rgba(34,34,34,0.12);
+            border-radius: 10px;
+            background: #f9fafb;
+        }
+
+        .contract-custom-package-fields.hidden {
+            display: none;
+        }
+
+        .contract-custom-package-fields h4,
+        .contract-custom-package-features {
+            grid-column: 1 / -1;
+        }
+
+        .contract-custom-package-fields h4 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 15px;
+        }
+
+        .contract-custom-package-features {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px 14px;
+        }
+
+        .invoice-items-header {
+            min-width: 170px;
+            grid-column: 1;
+        }
+
+        .invoice-lines-column {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .invoice-quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .invoice-quick-actions .admin-btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .invoice-quick-actions .invoice-quick-add-btn {
+            min-height: 38px;
+            font-size: 13px;
+        }
+
+        .invoice-items-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .client-service-addresses-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .client-address-fields {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 150px 112px;
+            align-items: end;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .client-address-fields .client-address-street {
+            grid-column: 1 / -1;
+        }
+
+        .client-address-fields label {
+            min-width: 0;
+        }
+
+        .client-address-fields input {
+            width: 100%;
+        }
+
+        .client-service-address-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            align-items: start;
+            gap: 10px;
+            padding: 8px 10px;
+            border: 1px solid rgba(34,34,34,0.12);
+            border-radius: 10px;
+            background: #f9fafb;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .client-service-address-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .client-service-address-title {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        @media (max-width: 600px) {
+            .client-address-fields {
+                grid-template-columns: minmax(0, 1fr) minmax(84px, 0.45fr);
+            }
+            .client-address-fields .client-address-street,
+            .client-address-fields .client-address-city {
+                grid-column: 1 / -1;
+            }
+            .client-service-address-row {
+                grid-template-columns: minmax(0, 1fr);
+            }
+            .client-service-address-header .admin-btn {
+                flex: 0 0 auto;
+            }
+        }
+
+        .client-service-address-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .admin-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .admin-checkbox-label input[type="checkbox"] {
+            width: auto;
+        }
+
+        .invoice-item-row {
+            display: grid;
+            grid-template-columns: minmax(150px, 180px) minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border: 1px solid rgba(34,34,34,0.12);
+            border-radius: 10px;
+            background: #f9fafb;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .invoice-contractor-row {
+            grid-template-columns: minmax(150px, 1fr) minmax(110px, 0.7fr) auto auto auto;
+        }
+
+        .invoice-contractor-rate {
+            color: #4b5563;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .invoice-item-trigger {
+            width: 100%;
+            min-height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 10px;
+            border: 1px solid rgba(34,34,34,0.18);
+            border-radius: 8px;
+            background: #fff;
+            color: #1f2937;
+            font-size: 13px;
+            font-weight: 600;
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+
+        .invoice-item-value-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .invoice-item-inline-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #4b5563;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .invoice-item-inline-label input {
+            width: 88px;
+            min-width: 88px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(34,34,34,0.18);
+            font-size: 13px;
+        }
+
+        .invoice-item-description-input {
+            min-width: 90px;
+            width: 100%;
+        }
+
+        .invoice-item-description-input input {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .invoice-item-description-label {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .invoice-remove-row-btn {
+            margin-left: 0;
+        }
+
+        .invoice-print-preview-dialog {
+            width: min(920px, 96vw);
+            max-height: 90vh;
+            overflow: auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+            padding: 24px;
+        }
+
+        .invoice-print-page {
+            width: min(100%, 816px);
+            aspect-ratio: 612 / 792;
+            background: #fff;
+            color: #111827;
+            position: relative;
+            margin: 0 auto;
+            font-family: 'InvoiceSTIXBold', serif;
+            font-size: 21.3px;
+            font-synthesis: none;
+        }
+
+        .invoice-pdf-print-page {
+            overflow: hidden;
+        }
+
+        .invoice-print-template {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .invoice-print-page > :not(.invoice-print-template) {
+            z-index: 1;
+        }
+
+        .invoice-print-value {
+            position: absolute;
+            line-height: 1.15;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 700;
+        }
+
+        .invoice-print-date,
+        .invoice-print-client,
+        .invoice-print-billing-address,
+        .invoice-print-address,
+        .invoice-print-number,
+        .invoice-print-total {
+            font-family: 'InvoiceSTIXBold', serif;
+            font-weight: 700;
+            font-style: normal;
+        }
+
+        .invoice-print-date,
+        .invoice-print-client,
+        .invoice-print-billing-address,
+        .invoice-print-address,
+        .invoice-print-number {
+            font-size: 21.3px;
+        }
+
+        .invoice-print-client {
+            left: 14.9%;
+            top: 18.4%;
+            max-width: 40%;
+        }
+
+        .invoice-print-billing-address {
+            left: 8.1%;
+            top: 22.6%;
+            max-width: 50%;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            line-height: 1.15;
+        }
+
+        .invoice-print-address {
+            left: 8.1%;
+            top: 30.6%;
+            max-width: 50%;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            line-height: 1.15;
+        }
+
+        .invoice-print-date {
+            left: 13.4%;
+            top: 36.7%;
+            max-width: 28%;
+        }
+
+        .invoice-print-number {
+            left: 17.3%;
+            top: 39.3%;
+            max-width: 28%;
+        }
+
+        .invoice-print-page.billing-template .invoice-print-date {
+            top: 28.3%;
+        }
+
+        .invoice-print-page.billing-template .invoice-print-number {
+            top: 30.8%;
+        }
+
+        .invoice-line-row {
+            position: absolute;
+            left: 0;
+            right: 0;
+            font-family: 'InvoiceSTIXBold', serif;
+            font-size: 21.3px;
+            font-style: normal;
+            font-weight: 700;
+        }
+
+        .invoice-line-row span {
+            position: absolute;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: 'InvoiceSTIXBold', serif !important;
+            font-size: 21.3px !important;
+            font-style: normal !important;
+            font-weight: 700 !important;
+        }
+
+        .invoice-line-description {
+            left: 0.85%;
+            width: 24%;
+            text-align: center;
+        }
+
+        .invoice-line-description-left {
+            left: 9.26%;
+            width: 24%;
+            text-align: left;
+        }
+
+        .invoice-line-qty {
+            left: 34.5%;
+            width: 12%;
+            text-align: center;
+        }
+
+        .invoice-line-price {
+            left: 54.5%;
+            width: 14%;
+            text-align: center;
+        }
+
+        .invoice-amount-integer {
+            right: 14.8%;
+            text-align: right;
+        }
+
+        .invoice-amount-decimal {
+            left: 85.2%;
+            text-align: left;
+        }
+
+        .invoice-print-total {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 93.1%;
+            font-size: 21.3px;
+        }
+
+        .invoice-print-total .invoice-amount-integer,
+        .invoice-print-total .invoice-amount-decimal {
+            position: absolute;
+        }
+
+        .invoice-print-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .contractor-payment-slip {
+            background: #fff;
+            color: #111827;
+            width: min(720px, 100%);
+            padding: 28px;
+            margin: 0 auto;
+            font-family: Georgia, serif;
+        }
+
+        .contractor-payment-slip h2 {
+            margin: 0 0 24px;
+            font-size: 25px;
+        }
+
+        .contractor-payment-slip dl {
+            display: grid;
+            grid-template-columns: minmax(130px, 1fr) 2fr;
+            gap: 12px 18px;
+            margin: 0 0 24px;
+        }
+
+        .contractor-payment-slip dt {
+            color: #6b7280;
+        }
+
+        .contractor-payment-slip dd {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .contractor-payment-slip-total {
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #d1d5db;
+            padding-top: 16px;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .contractor-payment-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .contractor-tax-filters {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 12px 0 14px;
+        }
+
+        .contractor-tax-filter-field {
+            display: grid;
+        }
+
+        .contractor-tax-filter-field[hidden] {
+            display: none;
+        }
+
+        @media print {
+            @page {
+                size: letter;
+                margin: 0;
+            }
+
+            html,
+            body {
+                width: 8.5in;
+                height: 11in;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                background: #fff;
+            }
+
+            body * {
+                visibility: hidden;
+            }
+
+            .invoice-print-preview-dialog,
+            .invoice-print-preview-dialog * {
+                visibility: visible;
+            }
+
+            body.printing-contractor-payment * {
+                visibility: hidden;
+            }
+
+            body.printing-contractor-payment .contractor-payment-print-area,
+            body.printing-contractor-payment .contractor-payment-print-area * {
+                visibility: visible;
+            }
+
+            body.printing-contractor-payment .contractor-payment-print-area {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 8.5in;
+                height: 11in;
+                padding: 0.5in;
+                margin: 0;
+                background: #fff;
+                box-sizing: border-box;
+            }
+
+            .contractor-payment-actions {
+                display: none;
+            }
+
+            .invoice-print-preview-dialog {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 8.5in;
+                height: 11in;
+                max-height: 11in;
+                overflow: hidden;
+                padding: 0;
+                border: none;
+                box-shadow: none;
+                background: transparent;
+            }
+
+            .invoice-print-page {
+                width: 8.5in;
+                height: 11in;
+                aspect-ratio: auto;
+                margin: 0;
+                box-shadow: none;
+                overflow: hidden;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .invoice-print-actions {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-page .content {
+                padding-bottom: 24px;
+            }
+            .admin-layout {
+                width: calc(100% - 32px);
+                gap: 24px;
+            }
+            .admin-header-row {
+                flex-direction: column;
+                gap: 14px;
+            }
+            .admin-header-row > div,
+            .admin-header-row .portal-card-stack {
+                width: 100%;
+                min-width: 0 !important;
+            }
+            .admin-summary-strip {
+                gap: 10px;
+            }
+            .admin-stat {
+                padding: 16px;
+            }
+            .admin-stat-value {
+                font-size: 28px;
+            }
+            .admin-tabs {
+                overflow-x: auto;
+                overflow-y: hidden;
+                gap: 4px;
+                margin-top: 24px !important;
+                padding-bottom: 1px;
+                scrollbar-width: thin;
+                -webkit-overflow-scrolling: touch;
+            }
+            .admin-tab-btn {
+                flex: 0 0 auto;
+                min-height: 44px;
+                padding: 10px 14px;
+                white-space: nowrap;
+            }
+            .admin-section-header {
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+            .admin-filter-bar {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .admin-filter-bar select {
+                width: 100%;
+                min-width: 0;
+            }
+            .contractor-tax-filters {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .contractor-tax-filters select {
+                width: 100%;
+                min-width: 0;
+            }
+            .admin-summary-strip {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .admin-table-wrapper {
+                display: none;
+            }
+            .mobile-record-list {
+                display: block;
+            }
+            .admin-table {
+                width: max-content;
+                min-width: 100%;
+                font-size: 13px;
+            }
+            .admin-table thead th {
+                padding: 8px 10px;
+            }
+            .admin-table td {
+                padding: 7px 10px;
+            }
+            #clients-tbody,
+            #invoices-tbody,
+            #contracts-tbody,
+            #contractors-tbody {
+                white-space: nowrap;
+            }
+            #admin-tab-panel-contractors .admin-section-header .contractor-header-actions {
+                width: auto;
+                margin-left: auto;
+            }
+            #admin-tab-panel-contractors .admin-section-header .client-service-address-actions .admin-btn {
+                min-height: 42px;
+            }
+            .admin-modal {
+                padding: 22px 18px;
+                max-height: calc(100dvh - 32px);
+                overflow-y: auto;
+            }
+            .admin-modal-wide {
+                width: calc(100vw - 32px);
+                max-width: 720px;
+            }
+            #modal-new-invoice {
+                padding: 8px;
+                overflow: hidden;
+                overscroll-behavior: none;
+                touch-action: pan-y;
+            }
+            #modal-new-invoice .admin-modal-wide {
+                box-sizing: border-box;
+                width: 100%;
+                max-width: 720px;
+                max-height: calc(100dvh - 16px);
+                overscroll-behavior: contain;
+                touch-action: pan-y;
+            }
+            #modal-new-invoice .admin-form input,
+            #modal-new-invoice .admin-form select {
+                font-size: 16px;
+            }
+            .invoice-print-preview-dialog {
+                width: calc(100vw - 24px);
+                max-height: calc(100dvh - 24px);
+                padding: 12px;
+                border-radius: 12px;
+            }
+            .contractor-payment-slip {
+                padding: 20px;
+            }
+            .invoice-items-panel {
+                grid-template-columns: 1fr;
+            }
+            .contract-custom-package-fields,
+            .contract-custom-package-features {
+                grid-template-columns: 1fr;
+            }
+            .invoice-items-header {
+                min-width: 0;
+                grid-column: auto;
+            }
+            .invoice-lines-column {
+                grid-column: auto;
+            }
+            .invoice-item-row {
+                grid-template-columns: 1fr;
+            }
+            .invoice-item-value-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .invoice-item-inline-label {
+                justify-content: space-between;
+                width: 100%;
+            }
+            .invoice-item-inline-label input {
+                width: 100%;
+                min-width: 0;
+            }
+            .invoice-remove-row-btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .admin-layout {
+                width: calc(100% - 24px);
+            }
+            .admin-summary-strip {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+            .admin-stat {
+                padding: 13px 12px;
+                border-radius: 10px;
+            }
+            .admin-stat-label {
+                font-size: 10px;
+            }
+            .admin-stat-value {
+                font-size: 25px;
+            }
+            .admin-stat-sub {
+                font-size: 12px;
+            }
+            .admin-section-title {
+                font-size: 20px;
+            }
+            .admin-table {
+                font-size: 12px;
+            }
+            .admin-table thead th {
+                padding: 7px 8px;
+                font-size: 10px;
+            }
+            .admin-table td {
+                padding: 6px 8px;
+            }
+            .admin-table td .admin-btn-sm {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+            .admin-filter-bar {
+                grid-template-columns: minmax(0, 1fr);
+            }
+            .contractor-tax-filters {
+                grid-template-columns: minmax(0, 1fr);
+            }
+            .admin-section-header > .admin-btn {
+                min-height: 42px;
+            }
+            .admin-modal {
+                width: calc(100vw - 20px);
+                max-width: none;
+                max-height: calc(100dvh - 20px);
+                padding: 18px 14px;
+            }
+            .admin-modal-wide {
+                width: calc(100vw - 20px);
+            }
+            .admin-modal-actions {
+                position: sticky;
+                bottom: -18px;
+                padding: 12px 0 4px;
+                background: #fff;
+            }
+            .client-service-address-header .admin-btn {
+                min-height: 38px;
+            }
+            .contractor-payment-slip {
+                padding: 16px 8px;
+            }
+            .contractor-payment-slip dl {
+                grid-template-columns: minmax(88px, 0.8fr) minmax(0, 1.2fr);
+                gap: 10px 12px;
+                overflow-wrap: anywhere;
+            }
+            .invoice-items-panel {
+                gap: 12px;
+            }
+            .invoice-item-row {
+                gap: 8px;
+                padding: 8px;
+            }
+            .invoice-quick-actions .admin-btn {
+                font-size: 12px;
+                padding: 8px 10px;
+            }
+        }
+    </style>
+</head>
+<body class="admin-page">
+<div class="topnav">
+    <div class="logo-bubble">
+        <button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+        </button>
+        <a href="home.html"> Stickman Handyman </a>
+    </div>
+    <nav class="nav-links">
+        <a href="home.html">Home</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="maintenance-packages.html">Maintenance Packages</a>
+        <a href="portal-find.html" class="current-link">Account</a>
+        <a href="contact.html">Contact Us</a>
+    </nav>
+</div>
+
+<div class="content">
+    <p id="admin-page-message" class="portal-page-message" aria-live="polite"></p>
+    <div class="admin-layout">
+        <section id="admin-dashboard">
+            <div class="admin-header-row">
+                <div>
+                    <p class="admin-greeting">Admin Dashboard</p>
+                    <h1 style="font-size:clamp(28px,3vw,36px);color:#222;margin:0;" id="admin-greeting-name">Welcome</h1>
+                </div>
+                <div class="portal-card-stack" style="min-width:min(100%, 320px);">
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+                        <button id="admin-refresh-btn" class="admin-btn admin-btn-ghost admin-btn-sm">Reload Data</button>
+                        <button id="admin-logout-btn" class="admin-btn admin-btn-ghost admin-btn-sm">Log Out</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="admin-summary-strip" class="admin-summary-strip" style="margin-top:20px;"></div>
+
+            <div class="admin-tabs" style="margin-top:32px;">
+                <button type="button" class="admin-tab-btn active" data-tab="clients">Clients</button>
+                <button type="button" class="admin-tab-btn" data-tab="invoices">Invoices</button>
+                <button type="button" class="admin-tab-btn" data-tab="contracts">Contracts</button>
+                <button type="button" class="admin-tab-btn" data-tab="contractors">Contractors</button>
+            </div>
+
+            <div id="admin-tab-panel-clients" class="admin-tab-panel" style="margin-top:24px;">
+                <div class="admin-section-header">
+                    <h2 class="admin-section-title">Clients</h2>
+                    <button id="new-client-btn" class="admin-btn admin-btn-sm">+ New Client</button>
+                </div>
+                <div class="admin-filter-bar">
+                    <select id="client-sort-select">
+                        <option value="name-asc">Name (A-Z)</option>
+                        <option value="name-desc">Name (Z-A)</option>
+                        <option value="createdAt-desc">Newest First</option>
+                        <option value="createdAt-asc">Oldest First</option>
+                        <option value="status-asc">Status</option>
+                    </select>
+                </div>
+                <div class="admin-table-wrapper">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Address</th>
+                                <th>Login</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-tbody">
+                            <tr><td colspan="6" class="admin-empty">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="mobile-clients-list" class="mobile-record-list"></div>
+            </div>
+
+            <div id="admin-tab-panel-invoices" class="admin-tab-panel" style="margin-top:24px;" hidden>
+                <div class="admin-section-header">
+                    <h2 class="admin-section-title">Invoices</h2>
+                    <button id="new-invoice-btn" class="admin-btn admin-btn-sm">+ New Invoice</button>
+                </div>
+                <div class="admin-filter-bar">
+                    <select id="invoice-filter-client-select">
+                        <option value="">All Clients</option>
+                    </select>
+                    <select id="invoice-sort-select">
+                        <option value="issueDate-desc">Newest First</option>
+                        <option value="issueDate-asc">Oldest First</option>
+                        <option value="client-asc">Client (A-Z)</option>
+                        <option value="client-desc">Client (Z-A)</option>
+                        <option value="amount-desc">Amount (High-Low)</option>
+                        <option value="amount-asc">Amount (Low-High)</option>
+                        <option value="status-asc">Status</option>
+                    </select>
+                </div>
+                <div class="admin-table-wrapper">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Status</th>
+                                <th>Client</th>
+                                <th>Amount</th>
+                                <th>Issue Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoices-tbody">
+                            <tr><td colspan="6" class="admin-empty">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="mobile-invoices-list" class="mobile-record-list"></div>
+            </div>
+
+            <div id="admin-tab-panel-contracts" class="admin-tab-panel" style="margin-top:24px;" hidden>
+                <div class="admin-section-header">
+                    <h2 class="admin-section-title">Contracts</h2>
+                    <button id="new-contract-btn" class="admin-btn admin-btn-sm">+ New Contract</button>
+                </div>
+                <div class="admin-filter-bar">
+                    <select id="contract-filter-client-select">
+                        <option value="">All Clients</option>
+                    </select>
+                    <select id="contract-filter-status-select">
+                        <option value="">All Statuses</option>
+                        <option value="draft">Draft</option>
+                        <option value="active">Active</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <select id="contract-sort-select">
+                        <option value="startDate-desc">Newest First</option>
+                        <option value="startDate-asc">Oldest First</option>
+                        <option value="client-asc">Client (A-Z)</option>
+                        <option value="client-desc">Client (Z-A)</option>
+                        <option value="status-asc">Status</option>
+                    </select>
+                </div>
+                <div class="admin-table-wrapper">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Contract #</th>
+                                <th>Status</th>
+                                <th>Client</th>
+                                <th>Package / Cycle</th>
+                                <th>Dates</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contracts-tbody">
+                            <tr><td colspan="6" class="admin-empty">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="mobile-contracts-list" class="mobile-record-list"></div>
+            </div>
+            <div id="admin-tab-panel-contractors" class="admin-tab-panel" style="margin-top:24px;" hidden>
+                <div class="admin-section-header">
+                    <h2 class="admin-section-title">Contractors</h2>
+                    <div class="client-service-address-actions contractor-header-actions">
+                        <button id="new-contractor-btn" class="admin-btn admin-btn-sm">+ New Contractor</button>
+                    </div>
+                </div>
+                <div class="contractor-tax-filters" aria-label="Contractor tax period filters">
+                    <div class="contractor-tax-filter-field">
+                        <select id="contractor-tax-year" aria-label="Tax year"></select>
+                    </div>
+                    <div class="contractor-tax-filter-field">
+                        <select id="contractor-tax-period" aria-label="Period">
+                            <option value="year">Full year</option>
+                            <option value="quarter">Quarter</option>
+                            <option value="month">Month</option>
+                        </select>
+                    </div>
+                    <div id="contractor-tax-quarter-wrapper" class="contractor-tax-filter-field" hidden>
+                        <select id="contractor-tax-quarter" aria-label="Quarter">
+                            <option value="1">Q1</option>
+                            <option value="2">Q2</option>
+                            <option value="3">Q3</option>
+                            <option value="4">Q4</option>
+                        </select>
+                    </div>
+                    <div id="contractor-tax-month-wrapper" class="contractor-tax-filter-field" hidden>
+                        <select id="contractor-tax-month" aria-label="Month">
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="admin-table-wrapper">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Pay Rate</th>
+                                <th>Hours</th>
+                                <th>Paid Amount</th>
+                                <th>Unpaid Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contractors-tbody">
+                            <tr><td colspan="7" class="admin-empty">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="mobile-contractors-list" class="mobile-record-list"></div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<div id="modal-new-client" class="admin-modal-backdrop hidden" style="display:none;">
+    <div class="admin-modal">
+        <h3 id="client-modal-title">New Client</h3>
+        <form id="form-new-client" class="admin-form">
+            <label>Name <input name="name" required></label>
+            <div id="client-billing-address" class="client-address-fields">
+                <label class="client-address-street">Street Address <input data-address-part="street" autocomplete="address-line1" required></label>
+                <label class="client-address-city">City <input data-address-part="city" autocomplete="address-level2" required></label>
+                <label>State <select data-address-part="state" data-state-select autocomplete="address-level1" required></select></label>
+                <label>ZIP Code <input data-address-part="zip" autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10"></label>
+            </div>
+            <label>Service Addresses</label>
+            <div id="client-service-addresses-container" class="client-service-addresses-container"></div>
+            <div class="client-service-address-actions">
+                <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost" id="add-client-service-address-btn">+ Add Service Address</button>
+            </div>
+            <div class="admin-modal-actions">
+                <button type="button" class="admin-btn admin-btn-ghost" data-close-modal="modal-new-client">Cancel</button>
+                <button type="submit" id="client-submit-button" class="admin-btn">Create Client</button>
+            </div>
+        </form>
+        <p id="msg-new-client" class="admin-message" aria-live="polite"></p>
+    </div>
+</div>
+
+<div id="modal-client-login" class="admin-modal-backdrop hidden" style="display:none;">
+    <div class="admin-modal">
+        <h3 id="client-login-modal-title">Client Login</h3>
+        <form id="form-client-login" class="admin-form">
+            <label>Email <input name="email" type="email" autocomplete="username" required></label>
+            <label>New Password <input name="password" type="password" autocomplete="new-password" minlength="8"></label>
+            <p class="portal-helper">Leave the password blank to keep it. Enter a new password to reset login access.</p>
+            <div class="admin-modal-actions">
+                <button type="button" class="admin-btn admin-btn-ghost" data-close-modal="modal-client-login">Cancel</button>
+                <button type="submit" id="client-login-submit-button" class="admin-btn">Save Login</button>
+            </div>
+        </form>
+        <p id="msg-client-login" class="admin-message" aria-live="polite"></p>
+    </div>
+</div>
+
+<div id="modal-new-invoice" class="admin-modal-backdrop hidden" style="display:none;">
+    <div class="admin-modal admin-modal-wide">
+        <h3 id="invoice-modal-title">New Invoice</h3>
+        <form id="form-new-invoice" class="admin-form">
+            <label>Client
+                <select name="clientId" id="invoice-client-select" required>
+                    <option value="">Select a client…</option>
+                </select>
+            </label>
+            <label class="admin-checkbox-label invoice-ongoing-toggle"><input name="isOngoing" id="invoice-is-ongoing" type="checkbox"> Ongoing job</label>
+            <label id="invoice-job-name-wrapper" class="hidden">Job / Project <input name="jobName" id="invoice-job-name" maxlength="160" placeholder="Job name (required for ongoing jobs)"></label>
+            <label id="invoice-service-address-wrapper" class="hidden">Service Address
+                <select name="serviceAddress" id="invoice-service-address-select">
+                    <option value="">Select a service address…</option>
+                </select>
+            </label>
+            <label>Issue Date <input name="issueDate" id="invoice-issue-date" type="date"></label>
+
+            <div class="invoice-items-panel">
+                <div class="invoice-items-header">
+                    <h4>Contractor Hours &amp; Items</h4>
+                    <div class="invoice-quick-actions">
+                        <div id="invoice-contractor-actions" class="invoice-quick-actions"></div>
+                        <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost invoice-quick-add-btn" id="add-materials-row-btn">+ Materials</button>
+                        <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost invoice-quick-add-btn" id="add-other-row-btn">+ Other</button>
+                    </div>
+                </div>
+                <div class="invoice-lines-column">
+                    <div id="invoice-contractor-hours-container" class="invoice-items-container"></div>
+                    <div id="invoice-items-container" class="invoice-items-container"></div>
+                </div>
+            </div>
+
+            <div class="invoice-totals-panel">
+                <div class="invoice-total-readout">Calculated total: <strong id="invoice-calculated-total">$0.00</strong></div>
+                <label>Final Invoice Total <input id="invoice-total-display" type="number" min="0" step="0.01" value="0.00"></label>
+            </div>
+
+            <div class="admin-modal-actions">
+                <button type="button" class="admin-btn admin-btn-ghost" data-close-modal="modal-new-invoice">Cancel</button>
+                <button type="submit" id="invoice-submit-button" class="admin-btn">Create Invoice</button>
+            </div>
+        </form>
+        <p id="msg-new-invoice" class="admin-message" aria-live="polite"></p>
+    </div>
+</div>
+
+<div id="modal-invoice-print" class="admin-modal-backdrop hidden" style="display:none;">
+    <div class="invoice-print-preview-dialog">
+        <div id="invoice-print-content"></div>
+        <div class="invoice-print-actions">
+            <button type="button" class="admin-btn admin-btn-ghost" data-close-modal="modal-invoice-print">Close</button>
+            <button type="button" id="invoice-print-button" class="admin-btn">Print / Save PDF</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-new-contract" class="admin-modal-backdrop hidden" style="display:none;">
+    <div class="admin-modal">
+        <h3 id="contract-modal-title">New Contract</h3>
+        <form id="form-new-contract" class="admin-form">
+            <label>Client
+                <select name="clientId" id="contract-client-select" required>
+                    <option value="">Select a client…</option>
+                </select>
+            </label>
+            <label>Maintenance Package Type
+                <select name="packageType" id="contract-package-type" required>
+                    <option value="" selected disabled>Select package type…</option>
+                    <option value="single_home">Single Home</option>
+                    <option value="portfolio">Portfolio</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </label>
+            <label id="contract-package-level-wrapper" class="hidden">Package Level
+                <select name="packageLevel" id="contract-package-level">
+                    <option value="basic" selected>Basic</option>
+                    <option value="pro">Pro</option>
+                    <option value="premium">Premium</option>
+                </select>
+            </label>
+            <div id="contract-custom-package-fields" class="contract-custom-package-fields hidden">
+                <h4>Custom Package Details</h4>
+                <label>Monthly Cost <input name="packageMonthlyCost" type="number" min="0" step="0.01" placeholder="0.00"></label>
+                <label>Retainer Hours <input name="packageRetainerHours" type="number" min="0" step="0.25" placeholder="0"></label>
+                <label>Rollover Hours <input name="packageRolloverHours" type="number" min="0" step="0.25" value="0"></label>
+                <label>Service Discount (%) <input name="packageDiscountPercent" type="number" min="0" max="100" step="0.5" value="0"></label>
+                <div class="contract-custom-package-features">
+                    <label class="admin-checkbox-label"><input name="packagePriorityScheduling" type="checkbox"> Priority Scheduling</label>
+                    <label class="admin-checkbox-label"><input name="packageAnnualInspection" type="checkbox"> Annual Home Inspection</label>
+                    <label class="admin-checkbox-label"><input name="packageQuarterlyInspection" type="checkbox"> Quarterly Home Inspection</label>
+                    <label class="admin-checkbox-label"><input name="packageOnCallService" type="checkbox"> On-Call Service</label>
+                    <label class="admin-checkbox-label"><input name="packageTenantCoordination" type="checkbox"> Tenant Coordination</label>
+                </div>
+            </div>
+            <label>Billing Cycle
+                <select name="billingCycle">
+                    <option value="monthly">Monthly</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="annually">Annually</option>
+                </select>
+            </label>
+            <label>Start Date <input name="startDate" type="date"></label>
+            <div class="admin-modal-actions">
+                <button type="button" class="admin-btn admin-btn-ghost" data-close-modal="modal-new-contract">Cancel</button>
+                <button type="submit" id="contract-submit-button" class="admin-btn">Create Contract</button>
+            </div>
+        </form>
+        <p id="msg-new-contract" class="admin-message" aria-live="polite"></p>
+    </div>
+</div>
+
+<div id="modal-contractor" class="admin-modal-backdrop hidden" style="display:none;">
+    <div class="admin-modal">
+        <h3 id="contractor-modal-title">New Contractor</h3>
+        <form id="form-contractor" class="admin-form">
+            <label>Name <input name="name" required maxlength="120" placeholder="Contractor name"></label>
+            <label>Hourly Pay Rate <input name="hourlyRate" type="number" min="0" step="0.01" required placeholder="0.00"></label>
+            <label id="contractor-status-label">Status
+                <select name="status">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </label>
+            <div class="admin-modal-actions">
+                <button type="button" class="admin-btn admin-btn-ghost" data-close-modal="modal-contractor">Cancel</button>
+                <button type="submit" id="contractor-submit-button" class="admin-btn">Create Contractor</button>
+            </div>
+        </form>
+        <p id="msg-contractor" class="admin-message" aria-live="polite"></p>
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2026 Stickman Handyman. All rights reserved.</p>
+</footer>
+
+<div id="portal-pdf-modal-backdrop" class="portal-pdf-modal-backdrop hidden" style="display:none;">
+    <div class="portal-pdf-modal">
+        <canvas id="portal-pdf-modal-canvas"></canvas>
+        <button type="button" id="portal-pdf-modal-download" class="admin-btn portal-pdf-modal-download">Download PDF</button>
+        <button type="button" id="portal-pdf-modal-close" class="portal-pdf-modal-close" title="Close">&times;</button>
+    </div>
+</div>
+
+<script src="portal-shared.js?v=20261007"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+    const portal = window.StickmanPortal;
+    portal.initTopnav();
+    portal.populateStateSelects();
+
+    let adminToken = portal.readAdminToken();
+    let apiBase = portal.readApiBase();
+    let allClients = [];
+    let adminInvoices = [];
+    let allContracts = [];
+    let allContractors = [];
+    let contractorPayments = [];
+    let ownerHourEntries = [];
+    let editingInvoiceId = null;
+    let editingClientId = null;
+    let editingClientLoginId = null;
+    let editingContractId = null;
+    let editingContractorId = null;
+    let clientSortValue = 'name-asc';
+    let invoiceFilterClientId = '';
+    let invoiceSortValue = 'issueDate-desc';
+    let contractFilterClientId = '';
+    let contractFilterStatus = '';
+    let contractSortValue = 'startDate-desc';
+
+    const $ = (id) => document.getElementById(id);
+
+    if (window.pdfjsLib) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    const pdfModalBackdrop = $('portal-pdf-modal-backdrop');
+    const pdfModalCanvas = $('portal-pdf-modal-canvas');
+    const pdfModalClose = $('portal-pdf-modal-close');
+    const pdfModalDownload = $('portal-pdf-modal-download');
+    let pdfRenderTask = null;
+    let viewedInvoiceId = null;
+    let viewedInvoiceDocument = null;
+    let invoicePrintNumber = '';
+
+    function invoicePdfDownloadName(invoiceNumber) {
+        const safeInvoiceNumber = String(invoiceNumber || 'Invoice').trim().replace(/^INV-/i, '').replace(/[^\w.-]+/g, '_');
+        return `StickmanHandyman_${safeInvoiceNumber || 'Invoice'}.pdf`;
+    }
+
+    function printInvoiceDocument() {
+        const previousTitle = document.title;
+        document.title = invoicePdfDownloadName(invoicePrintNumber).replace(/\.pdf$/i, '');
+        window.addEventListener('afterprint', () => {
+            document.title = previousTitle;
+        }, { once: true });
+        window.print();
+    }
+
+    async function openPdfModal(invoiceId) {
+        viewedInvoiceId = invoiceId;
+        invoicePrintNumber = adminInvoices.find((invoice) => invoice.id === invoiceId)?.invoiceNumber || '';
+        viewedInvoiceDocument = null;
+        pdfModalDownload.disabled = true;
+        pdfModalBackdrop.style.display = 'flex';
+        pdfModalBackdrop.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        try {
+            const url = `${apiBase}/api/invoices/${encodeURIComponent(invoiceId)}/pdf?disposition=inline`;
+            const pdf = await window.pdfjsLib.getDocument({
+                url,
+                httpHeaders: { Authorization: `Bearer ${adminToken}` },
+            }).promise;
+            viewedInvoiceDocument = pdf;
+            const page = await pdf.getPage(1);
+            const containerRect = pdfModalCanvas.getBoundingClientRect();
+            const displayWidth = Math.round(containerRect.width);
+            const displayHeight = Math.round(containerRect.height);
+            const pixelRatio = Math.min((window.devicePixelRatio || 1) * 2, 4);
+            const unscaledViewport = page.getViewport({ scale: 1 });
+            const scale = Math.min(displayWidth / unscaledViewport.width, displayHeight / unscaledViewport.height);
+            const viewport = page.getViewport({ scale: scale * pixelRatio });
+
+            pdfModalCanvas.width = Math.round(viewport.width);
+            pdfModalCanvas.height = Math.round(viewport.height);
+
+            const context = pdfModalCanvas.getContext('2d');
+            context.fillStyle = '#ffffff';
+            context.fillRect(0, 0, pdfModalCanvas.width, pdfModalCanvas.height);
+
+            if (pdfRenderTask) {
+                pdfRenderTask.cancel();
+            }
+            pdfRenderTask = page.render({ canvasContext: context, viewport });
+            await pdfRenderTask.promise;
+            pdfModalDownload.disabled = false;
+        } catch (error) {
+            console.error('Failed to render invoice PDF:', error);
+        }
+    }
+
+    function closePdfModal() {
+        pdfModalBackdrop.style.display = 'none';
+        pdfModalBackdrop.classList.add('hidden');
+        document.body.style.overflow = '';
+        viewedInvoiceId = null;
+        viewedInvoiceDocument = null;
+        pdfModalDownload.disabled = true;
+        if (pdfRenderTask) {
+            pdfRenderTask.cancel();
+            pdfRenderTask = null;
+        }
+    }
+
+    pdfModalClose.addEventListener('click', closePdfModal);
+    pdfModalDownload.addEventListener('click', async () => {
+        if (!viewedInvoiceId || !viewedInvoiceDocument) {
+            return;
+        }
+
+        pdfModalDownload.disabled = true;
+        try {
+            const pdfData = await viewedInvoiceDocument.getData();
+            const downloadUrl = URL.createObjectURL(new Blob([pdfData], { type: 'application/pdf' }));
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = invoicePdfDownloadName(invoicePrintNumber);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        } catch (error) {
+            console.error('Failed to download invoice PDF:', error);
+            window.alert('Unable to download this invoice PDF. Please try again.');
+        } finally {
+            pdfModalDownload.disabled = false;
+        }
+    });
+    pdfModalBackdrop.addEventListener('click', (event) => {
+        if (event.target === pdfModalBackdrop) {
+            closePdfModal();
+        }
+    });
+
+    if (!adminToken || !apiBase) {
+        window.location.replace('portal-login.html?reason=admin-session-required');
+    }
+
+    $('admin-refresh-btn').addEventListener('click', () => {
+        apiBase = portal.readApiBase();
+        loadAll();
+    });
+
+    $('admin-logout-btn').addEventListener('click', () => {
+        portal.clearAdminSession();
+        window.location.href = 'portal-login.html';
+    });
+
+    document.querySelectorAll('.admin-tab-btn').forEach((button) => {
+        button.addEventListener('click', () => setAdminTab(button.dataset.tab));
+    });
+
+    function setAdminTab(tab) {
+        const currentPanel = document.querySelector('.admin-tab-panel:not([hidden])');
+        const nextPanel = $(`admin-tab-panel-${tab}`);
+        const scrollPosition = window.scrollY;
+
+        if (currentPanel && nextPanel && currentPanel !== nextPanel) {
+            const retainedHeight = Math.max(currentPanel.getBoundingClientRect().height, nextPanel.getBoundingClientRect().height);
+            nextPanel.style.minHeight = `${retainedHeight}px`;
+        }
+
+        document.querySelectorAll('.admin-tab-btn').forEach((button) => {
+            button.classList.toggle('active', button.dataset.tab === tab);
+        });
+        ['clients', 'invoices', 'contracts', 'contractors'].forEach((name) => {
+            $(`admin-tab-panel-${name}`).hidden = name !== tab;
+        });
+
+        requestAnimationFrame(() => window.scrollTo(0, scrollPosition));
+    }
+
+    $('client-sort-select').addEventListener('change', () => {
+        clientSortValue = $('client-sort-select').value;
+        renderClientsTable();
+    });
+
+    $('invoice-filter-client-select').addEventListener('change', () => {
+        invoiceFilterClientId = $('invoice-filter-client-select').value;
+        renderInvoicesTable();
+    });
+
+    $('invoice-sort-select').addEventListener('change', () => {
+        invoiceSortValue = $('invoice-sort-select').value;
+        renderInvoicesTable();
+    });
+
+    $('contract-filter-client-select').addEventListener('change', () => {
+        contractFilterClientId = $('contract-filter-client-select').value;
+        renderContractsTable();
+    });
+
+    $('contract-filter-status-select').addEventListener('change', () => {
+        contractFilterStatus = $('contract-filter-status-select').value;
+        renderContractsTable();
+    });
+
+    $('contract-sort-select').addEventListener('change', () => {
+        contractSortValue = $('contract-sort-select').value;
+        renderContractsTable();
+    });
+
+    $('contractor-tax-year').addEventListener('change', renderContractors);
+    $('contractor-tax-period').addEventListener('change', () => {
+        updateContractorTaxPeriodVisibility();
+        renderContractors();
+    });
+    $('contractor-tax-quarter').addEventListener('change', renderContractors);
+    $('contractor-tax-month').addEventListener('change', renderContractors);
+
+    $('new-client-btn').addEventListener('click', () => {
+        editingClientId = null;
+        $('form-new-client').reset();
+        resetClientServiceAddressRows();
+        $('client-modal-title').textContent = 'New Client';
+        $('client-submit-button').textContent = 'Create Client';
+        openModal('modal-new-client');
+    });
+    $('add-client-service-address-btn').addEventListener('click', () => addClientServiceAddressRow());
+    $('new-invoice-btn').addEventListener('click', () => {
+        editingInvoiceId = null;
+        $('form-new-invoice').reset();
+        resetInvoiceItemRows();
+        $('invoice-contractor-hours-container').innerHTML = '';
+        populateInvoiceServiceAddressSelect('');
+        setTodayInvoiceIssueDate();
+        $('invoice-is-ongoing').disabled = false;
+        $('invoice-job-name-wrapper').classList.add('hidden');
+        $('invoice-submit-button').textContent = 'Create Invoice';
+        $('invoice-modal-title').textContent = 'New Invoice';
+        $('invoice-submit-button').textContent = 'Create Invoice';
+        openModal('modal-new-invoice');
+    });
+    $('invoice-print-button').addEventListener('click', async () => {
+        await Promise.all([
+            document.fonts.load('700 24px InvoiceSTIXBold'),
+            document.fonts.load('italic 700 24px InvoiceSTIXBoldItalic'),
+        ]);
+        printInvoiceDocument();
+    });
+    $('new-contract-btn').addEventListener('click', () => {
+        editingContractId = null;
+        $('form-new-contract').reset();
+        $('contract-package-level').required = false;
+        $('contract-package-level-wrapper').classList.add('hidden');
+        $('contract-custom-package-fields').classList.add('hidden');
+        $('form-new-contract').elements.namedItem('packageMonthlyCost').required = false;
+        $('form-new-contract').elements.namedItem('packageRetainerHours').required = false;
+        $('contract-modal-title').textContent = 'New Contract';
+        $('contract-submit-button').textContent = 'Create Contract';
+        openModal('modal-new-contract');
+    });
+    $('contract-package-type').addEventListener('change', () => {
+        const packageType = $('contract-package-type').value;
+        const isCustom = packageType === 'custom';
+        const hasStandardPackage = packageType === 'single_home' || packageType === 'portfolio';
+        $('contract-package-level-wrapper').classList.toggle('hidden', !hasStandardPackage);
+        $('contract-package-level').required = hasStandardPackage;
+        $('contract-custom-package-fields').classList.toggle('hidden', !isCustom);
+        $('form-new-contract').elements.namedItem('packageMonthlyCost').required = isCustom;
+        $('form-new-contract').elements.namedItem('packageRetainerHours').required = isCustom;
+        if (isCustom) {
+            $('contract-package-level').value = '';
+        } else if (hasStandardPackage && !$('contract-package-level').value) {
+            $('contract-package-level').value = 'basic';
+        }
+    });
+    $('new-contractor-btn').addEventListener('click', () => openNewContractorForm());
+    $('add-materials-row-btn').addEventListener('click', () => addInvoiceItemRow({ type: 'material', description: 'Materials', quantity: 1, unitPriceCents: 0 }));
+    $('add-other-row-btn').addEventListener('click', () => addInvoiceItemRow({ type: 'package', description: '', quantity: 1, unitPriceCents: 0 }));
+
+    document.addEventListener('input', (event) => {
+        const target = event.target;
+        if (target && target.closest('.invoice-item-input')) {
+            updateInvoiceTotals();
+        }
+        if (target && target.id === 'invoice-total-display') {
+            if (!Number.isFinite(Number(target.value))) {
+                target.value = '0';
+            }
+            updateInvoiceTotals();
+        }
+    });
+
+    document.querySelectorAll('[data-close-modal]').forEach((button) => {
+        button.addEventListener('click', () => closeModal(button.dataset.closeModal));
+    });
+
+    document.querySelectorAll('.admin-modal-backdrop').forEach((backdrop) => {
+        backdrop.addEventListener('click', (event) => {
+            if (event.target === backdrop) {
+                closeModal(backdrop.id);
+            }
+        });
+    });
+
+    $('form-new-client').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData($('form-new-client'));
+        const billingAddress = formatClientAddress(getClientAddressParts($('client-billing-address')));
+        const serviceAddresses = getClientServiceAddressRows();
+
+        try {
+            const requestPath = editingClientId ? `/api/clients/${encodeURIComponent(editingClientId)}` : '/api/clients';
+            const response = await apiFetch(requestPath, {
+                method: editingClientId ? 'PUT' : 'POST',
+                body: JSON.stringify({
+                    name: String(data.get('name') || '').trim(),
+                    address: billingAddress,
+                    serviceAddresses,
+                }),
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Save failed.');
+            }
+            setMsg('msg-new-client', editingClientId ? 'Client updated.' : 'Client created.', false);
+            $('form-new-client').reset();
+            resetClientServiceAddressRows();
+            editingClientId = null;
+            closeModal('modal-new-client');
+            await loadClients();
+            await loadSummary();
+        } catch (error) {
+            setMsg('msg-new-client', error.message, true);
+        }
+    });
+
+    $('form-client-login').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const clientId = editingClientLoginId;
+        if (!clientId) {
+            return;
+        }
+
+        const data = new FormData($('form-client-login'));
+        const password = String(data.get('password') || '');
+        try {
+            const response = await apiFetch(`/api/clients/${encodeURIComponent(clientId)}/login`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    email: String(data.get('email') || '').trim(),
+                    ...(password ? { password } : {}),
+                }),
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Unable to save client login.');
+            }
+
+            setMsg('msg-client-login', 'Client login details updated.', false);
+            $('form-client-login').reset();
+            editingClientLoginId = null;
+            window.setTimeout(() => closeModal('modal-client-login'), 900);
+            await loadClients();
+        } catch (error) {
+            setMsg('msg-client-login', error.message, true);
+        }
+    });
+
+    $('form-new-invoice').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData($('form-new-invoice'));
+        const lineItems = getInvoiceItemRows();
+        const contractorHours = getContractorHoursRows();
+        const laborItems = buildContractorLaborItems(contractorHours);
+        const editedInvoice = adminInvoices.find((invoice) => invoice.id === editingInvoiceId);
+        const legacyLaborInvoice = Boolean(editingInvoiceId && editedInvoice && !Array.isArray(editedInvoice.contractorHours));
+        const invoiceItems = legacyLaborInvoice
+            ? lineItems
+            : [...laborItems, ...lineItems.filter((item) => item.type !== 'labor')];
+        const calculatedSubtotal = invoiceItems.reduce((sum, item) => sum + Math.round(Math.max(0, Number(item.quantity || 1)) * Math.max(0, Number(item.unitPriceCents || 0))), 0);
+        const finalTotalCents = Math.max(Math.round((Number($('invoice-total-display').value || '0') * 100)), 0);
+        const discountCents = Math.max(calculatedSubtotal - finalTotalCents, 0);
+        const selectedClientId = String(data.get('clientId') || '');
+        const selectedServiceAddress = String(data.get('serviceAddress') || '').trim();
+        const isOngoing = data.get('isOngoing') === 'on';
+        const jobName = String(data.get('jobName') || '').trim();
+
+        if (isOngoing && !jobName) {
+            setMsg('msg-new-invoice', 'Enter a job name for an ongoing job.', true);
+            $('invoice-job-name').focus();
+            return;
+        }
+
+        try {
+            const requestPath = editingInvoiceId ? `/api/invoices/${encodeURIComponent(editingInvoiceId)}` : '/api/invoices';
+            const response = await apiFetch(requestPath, {
+                method: editingInvoiceId ? 'PATCH' : 'POST',
+                body: JSON.stringify({
+                    accountId: selectedClientId,
+                    issueDate: String(data.get('issueDate') || '') || getTodayLocalDate(),
+                    jobName,
+                    isOngoing,
+                    contractorHours: legacyLaborInvoice && contractorHours.length === 0 ? undefined : contractorHours,
+                    subtotalCents: calculatedSubtotal,
+                    amountCents: finalTotalCents,
+                    discountCents,
+                    serviceAddress: selectedServiceAddress,
+                    lineItems: invoiceItems.map((item) => ({
+                        type: item.type,
+                        description: String(item.description || '').trim(),
+                        quantity: Math.max(0.25, Number(item.quantity || 1)),
+                        unitPriceCents: Math.max(0, Math.round(Number(item.unitPriceCents || 0))),
+                        taxable: false,
+                    })),
+                }),
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                const details = payload.details?.fieldErrors
+                    ? Object.entries(payload.details.fieldErrors)
+                        .flatMap(([field, messages]) => messages.map((message) => `${field}: ${message}`))
+                        .join(' ')
+                    : '';
+                throw new Error([payload.error || 'Create failed.', details].filter(Boolean).join(' '));
+            }
+            setMsg('msg-new-invoice', editingInvoiceId ? 'Invoice updated.' : 'Invoice created.', false);
+            $('form-new-invoice').reset();
+            resetInvoiceItemRows();
+            $('invoice-contractor-hours-container').innerHTML = '';
+            $('invoice-submit-button').textContent = 'Create Invoice';
+            editingInvoiceId = null;
+            closeModal('modal-new-invoice');
+            await loadInvoices();
+            await loadContractors();
+            await loadSummary();
+        } catch (error) {
+            setMsg('msg-new-invoice', error.message, true);
+        }
+    });
+
+    $('form-new-contract').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData($('form-new-contract'));
+        const contractId = editingContractId;
+        const packageType = String(data.get('packageType') || '');
+        const isCustomPackage = packageType === 'custom';
+        try {
+            const response = await apiFetch(contractId ? `/api/contracts/${encodeURIComponent(contractId)}` : '/api/contracts', {
+                method: contractId ? 'PATCH' : 'POST',
+                body: JSON.stringify({
+                    clientId: String(data.get('clientId') || ''),
+                    billingCycle: String(data.get('billingCycle') || 'monthly'),
+                    startDate: String(data.get('startDate') || '') || undefined,
+                    packageType: packageType || undefined,
+                    packageLevel: isCustomPackage ? null : String(data.get('packageLevel') || '') || undefined,
+                    packageMonthlyCostCents: isCustomPackage
+                        ? Math.round(Number(data.get('packageMonthlyCost') || 0) * 100)
+                        : undefined,
+                    packageRetainerHours: isCustomPackage
+                        ? Number(data.get('packageRetainerHours') || 0)
+                        : undefined,
+                    packageRolloverHours: isCustomPackage
+                        ? Number(data.get('packageRolloverHours') || 0)
+                        : undefined,
+                    packageDiscountPercent: isCustomPackage
+                        ? Number(data.get('packageDiscountPercent') || 0)
+                        : undefined,
+                    packagePriorityScheduling: isCustomPackage && data.get('packagePriorityScheduling') === 'on',
+                    packageAnnualInspection: isCustomPackage && data.get('packageAnnualInspection') === 'on',
+                    packageQuarterlyInspection: isCustomPackage && data.get('packageQuarterlyInspection') === 'on',
+                    packageOnCallService: isCustomPackage && data.get('packageOnCallService') === 'on',
+                    packageTenantCoordination: isCustomPackage && data.get('packageTenantCoordination') === 'on',
+                }),
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Save failed.');
+            }
+            setMsg('msg-new-contract', contractId ? 'Contract updated.' : 'Contract created.', false);
+            $('form-new-contract').reset();
+            editingContractId = null;
+            window.setTimeout(() => closeModal('modal-new-contract'), 900);
+            await loadContracts();
+            await loadSummary();
+        } catch (error) {
+            setMsg('msg-new-contract', error.message, true);
+        }
+    });
+
+    $('form-contractor').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData($('form-contractor'));
+        const contractorId = editingContractorId;
+        try {
+            const response = await apiFetch(contractorId ? `/api/contractors/${encodeURIComponent(contractorId)}` : '/api/contractors', {
+                method: contractorId ? 'PATCH' : 'POST',
+                body: JSON.stringify({
+                    name: String(data.get('name') || '').trim(),
+                    hourlyRateCents: Math.round(Number(data.get('hourlyRate') || 0) * 100),
+                    status: String(data.get('status') || 'active'),
+                }),
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Unable to save contractor.');
+            }
+            closeModal('modal-contractor');
+            editingContractorId = null;
+            await loadContractors();
+        } catch (error) {
+            setMsg('msg-contractor', error.message, true);
+        }
+    });
+
+    loadAll();
+
+    async function loadAll() {
+        adminToken = portal.readAdminToken();
+        apiBase = portal.readApiBase();
+        if (!adminToken || !apiBase) {
+            window.location.replace('portal-login.html?reason=admin-session-required');
+            return;
+        }
+
+        setPageMessage('Loading dashboard...', false);
+        try {
+            const snapshot = await portal.fetchAdminSnapshot(apiBase, adminToken);
+            renderSummary(snapshot.summary || {});
+            renderClients(snapshot.clients || []);
+            renderInvoices(snapshot.invoices || []);
+            renderContracts(snapshot.contracts || []);
+            await loadContractors();
+            $('admin-greeting-name').textContent = 'Welcome';
+            setPageMessage('', false);
+        } catch (error) {
+            if (error.status === 401 || error.status === 403) {
+                portal.clearAdminSession();
+                window.location.replace('portal-login.html?reason=session-expired');
+                return;
+            }
+
+            setPageMessage(error.message || 'Unable to load the admin dashboard right now.', true);
+        }
+    }
+
+    async function loadSummary() {
+        try {
+            const snapshot = await portal.fetchAdminSnapshot(apiBase, adminToken);
+            renderSummary(snapshot.summary || {});
+        } catch (error) {
+            if (error.status === 401 || error.status === 403) {
+                portal.clearAdminSession();
+                window.location.replace('portal-login.html?reason=session-expired');
+                return;
+            }
+
+            setPageMessage(error.message || 'Unable to refresh dashboard summary right now.', true);
+        }
+    }
+
+    async function loadClients() {
+        try {
+            const response = await apiFetch('/api/clients');
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Error loading clients.');
+            }
+            renderClients(payload.clients || []);
+        } catch {
+            $('clients-tbody').innerHTML = '<tr><td colspan="6" class="admin-empty">Error loading clients.</td></tr>';
+        }
+    }
+
+    async function loadInvoices() {
+        try {
+            const response = await apiFetch('/api/invoices');
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Error loading invoices.');
+            }
+            renderInvoices(payload.invoices || []);
+        } catch {
+            $('invoices-tbody').innerHTML = '<tr><td colspan="6" class="admin-empty">Error loading invoices.</td></tr>';
+        }
+    }
+
+    async function loadContracts() {
+        try {
+            const response = await apiFetch('/api/contracts');
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Error loading contracts.');
+            }
+            renderContracts(payload.contracts || []);
+        } catch {
+            $('contracts-tbody').innerHTML = '<tr><td colspan="6" class="admin-empty">Error loading contracts.</td></tr>';
+        }
+    }
+
+    async function loadContractors() {
+        try {
+            const response = await apiFetch('/api/contractors');
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Error loading contractors.');
+            }
+            allContractors = payload.contractors || [];
+            contractorPayments = payload.payments || [];
+            ownerHourEntries = payload.ownerHours || [];
+            renderContractors();
+        } catch (error) {
+            $('contractors-tbody').innerHTML = '<tr><td colspan="7" class="admin-empty">Error loading contractors.</td></tr>';
+            setPageMessage(error.message || 'Unable to load contractors.', true);
+        }
+    }
+
+    async function updateStatus(entity, id, status) {
+        try {
+            const path = entity === 'invoice' ? `/api/invoices/${id}` : `/api/contracts/${id}`;
+            const response = await apiFetch(path, {
+                method: 'PATCH',
+                body: JSON.stringify({ status }),
+            });
+            if (!response.ok) {
+                throw new Error('Update failed.');
+            }
+            if (entity === 'invoice') {
+                await loadInvoices();
+                await loadContractors();
+            } else {
+                await loadContracts();
+            }
+            await loadSummary();
+        } catch (error) {
+            window.alert('Update failed: ' + error.message);
+        }
+    }
+
+    function renderSummary(summary) {
+        $('admin-summary-strip').innerHTML = [
+            { label: 'Total Clients', value: summary.clients, sub: `${summary.activeClients} active` },
+            { label: 'Invoices', value: summary.invoices, sub: `${summary.openInvoices} open` },
+            { label: 'Contracts', value: summary.contracts, sub: `${summary.activeContracts} active` },
+            { label: 'Sent Invoices', value: summary.sentInvoices, sub: 'ready for payment' },
+        ].map((entry) => `
+            <div class="admin-stat">
+                <span class="admin-stat-label">${entry.label}</span>
+                <span class="admin-stat-value">${entry.value || 0}</span>
+                <span class="admin-stat-sub">${entry.sub}</span>
+            </div>
+        `).join('');
+    }
+
+    function renderClients(clients) {
+        allClients = clients;
+        populateClientSelects(clients);
+        populateFilterClientSelects(clients);
+        populateInvoiceServiceAddressSelect($('invoice-client-select').value || '');
+        renderClientsTable();
+    }
+
+    function mobileRecordCard(title, subtitle, summary, fields, actions, subtitleIsMarkup = false) {
+        const detailRows = fields.map(([label, value]) => `
+            <span class="mobile-record-label">${esc(label)}</span>
+            <span class="mobile-record-value">${esc(value)}</span>
+        `).join('');
+
+        return `
+            <details class="mobile-record-card ${subtitleIsMarkup ? 'mobile-record-card-with-status' : ''}">
+                <summary>
+                    ${subtitleIsMarkup
+                        ? `<span class="mobile-record-heading"><span class="mobile-record-title">${esc(title)}</span><span class="mobile-record-subtitle">${subtitle}</span></span>`
+                        : `<span class="mobile-record-title">${esc(title)}</span><span class="mobile-record-subtitle">${esc(subtitle)}</span>`}
+                    <span class="mobile-record-summary-value">${summary}</span>
+                </summary>
+                <div class="mobile-record-details">
+                    ${detailRows}
+                    ${actions ? `<div class="mobile-record-actions">${actions}</div>` : ''}
+                </div>
+            </details>
+        `;
+    }
+
+    function renderClientsTable() {
+        const clients = sortRows(allClients, clientSortValue, {
+            name: (client) => (client.name || '').toLowerCase(),
+            createdAt: (client) => client.createdAt || '',
+            status: (client) => client.status || '',
+        });
+
+        if (!clients.length) {
+            $('clients-tbody').innerHTML = '<tr><td colspan="6" class="admin-empty">No clients yet.</td></tr>';
+            $('mobile-clients-list').innerHTML = '<p class="admin-empty">No clients yet.</p>';
+            return;
+        }
+
+        $('clients-tbody').innerHTML = clients.map((client) => `
+            <tr>
+                <td>${esc(client.name)}</td>
+                <td><span class="admin-badge badge-${client.status}">${client.status}</span></td>
+                <td>${esc(client.address)}</td>
+                <td>${client.clientLoginEnabled ? '✓' : ''}</td>
+                <td>${fmtDate(client.createdAt)}</td>
+                <td><div class="client-table-actions">
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost" data-view-client-invoices="${esc(client.id)}">Invoices</button>
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost" data-edit-client="${esc(client.id)}">Edit</button>
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost" data-edit-client-login="${esc(client.id)}">${client.clientLoginEnabled ? 'Edit Login' : 'Set Login'}</button>
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost admin-btn-remove" data-delete-client="${esc(client.id)}">Remove</button>
+                </div></td>
+            </tr>
+        `).join('');
+        $('mobile-clients-list').innerHTML = clients.map((client) => mobileRecordCard(
+            client.name,
+            `<span class="admin-badge badge-${esc(client.status)}">${esc(client.status)}</span>`,
+            client.address,
+            [
+                ['Login', client.clientLoginEnabled ? '✓' : ''],
+                ['Created', fmtDate(client.createdAt)],
+            ],
+            `
+                <button class="admin-btn admin-btn-sm admin-btn-ghost" data-view-client-invoices="${esc(client.id)}">Invoices</button>
+                <button class="admin-btn admin-btn-sm admin-btn-ghost" data-edit-client="${esc(client.id)}">Edit</button>
+                <button class="admin-btn admin-btn-sm admin-btn-ghost" data-edit-client-login="${esc(client.id)}">${client.clientLoginEnabled ? 'Edit Login' : 'Set Login'}</button>
+                <button class="admin-btn admin-btn-sm admin-btn-ghost admin-btn-remove" data-delete-client="${esc(client.id)}">Remove</button>
+            `,
+            true,
+        )).join('');
+    }
+
+    function renderInvoices(invoices) {
+        adminInvoices = invoices;
+        renderInvoicesTable();
+    }
+
+    function renderInvoicesTable() {
+        let invoices = invoiceFilterClientId
+            ? adminInvoices.filter((invoice) => (invoice.accountId || invoice.clientId) === invoiceFilterClientId)
+            : adminInvoices.slice();
+
+        invoices = sortRows(invoices, invoiceSortValue, {
+            issueDate: (invoice) => invoice.issueDate || invoice.createdAt || '',
+            client: (invoice) => clientName(invoice.accountId || invoice.clientId).toLowerCase(),
+            amount: (invoice) => Number(invoice.amountCents || 0),
+            status: (invoice) => invoice.status || '',
+        });
+
+        if (!invoices.length) {
+            $('invoices-tbody').innerHTML = '<tr><td colspan="6" class="admin-empty">No invoices match the current filters.</td></tr>';
+            $('mobile-invoices-list').innerHTML = '<p class="admin-empty">No invoices match the current filters.</p>';
+            return;
+        }
+
+        $('invoices-tbody').innerHTML = invoices.map((invoice) => `
+            <tr>
+                <td>${esc(invoice.invoiceNumber || invoice.jobName || 'Ongoing Job')}</td>
+                <td><span class="admin-badge badge-${esc(invoice.status)}">${esc(invoice.status)}</span></td>
+                <td>${esc(clientName(invoice.accountId || invoice.clientId))}</td>
+                <td>$${(invoice.amountCents / 100).toFixed(2)}</td>
+                <td>${fmtDate(invoice.issueDate || invoice.createdAt)}</td>
+                <td><div class="invoice-table-actions">
+                    ${invoice.status !== 'ongoing' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-view-invoice="${esc(invoice.id)}">View</button>` : ''}
+                    ${invoice.status === 'ongoing' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-finalize-invoice="${esc(invoice.id)}">Create Invoice</button>` : ''}
+                    ${invoice.status !== 'paid' && invoice.status !== 'void' ? `
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost" data-edit-invoice="${esc(invoice.id)}">Edit</button>
+                    ${invoice.status !== 'ongoing' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-entity="invoice" data-id="${esc(invoice.id)}" data-status="paid">Mark Paid</button>` : ''}
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost admin-btn-remove" data-delete-invoice="${esc(invoice.id)}">Remove</button>` : ''}
+                    ${invoice.status === 'paid' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-entity="invoice" data-id="${esc(invoice.id)}" data-status="sent">Unmark Paid</button>` : ''}
+                </div></td>
+            </tr>
+        `).join('');
+        $('mobile-invoices-list').innerHTML = invoices.map((invoice) => {
+            const invoiceLabel = invoice.invoiceNumber || invoice.jobName || 'Ongoing Job';
+            const actions = `
+                ${invoice.status !== 'ongoing' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-view-invoice="${esc(invoice.id)}">View</button>` : ''}
+                ${invoice.status === 'ongoing' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-finalize-invoice="${esc(invoice.id)}">Create Invoice</button>` : ''}
+                ${invoice.status !== 'paid' && invoice.status !== 'void' ? `
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost" data-edit-invoice="${esc(invoice.id)}">Edit</button>
+                    ${invoice.status !== 'ongoing' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-entity="invoice" data-id="${esc(invoice.id)}" data-status="paid">Mark Paid</button>` : ''}
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost admin-btn-remove" data-delete-invoice="${esc(invoice.id)}">Remove</button>` : ''}
+                ${invoice.status === 'paid' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-entity="invoice" data-id="${esc(invoice.id)}" data-status="sent">Unmark Paid</button>` : ''}
+            `;
+            return mobileRecordCard(
+                invoiceLabel,
+                `<span class="admin-badge badge-${esc(invoice.status)}">${esc(invoice.status)}</span>`,
+                `${clientName(invoice.accountId || invoice.clientId)} · $${(Number(invoice.amountCents || 0) / 100).toFixed(2)}`,
+                [['Issue date', fmtDate(invoice.issueDate || invoice.createdAt)]],
+                actions,
+                true,
+            );
+        }).join('');
+    }
+
+    function buildInvoicePrintMarkup(invoice) {
+        const client = allClients.find((entry) => entry.id === (invoice.accountId || invoice.clientId)) || null;
+        const lineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length
+            ? invoice.lineItems
+            : [{ type: 'labor', description: 'Labor', quantity: 1, unitPriceCents: invoice.amountCents || 0 }];
+
+        const rows = lineItems.map((item, index) => {
+            const quantity = Number(item.quantity || 1);
+            const unitPrice = Math.max(0, Number(item.unitPriceCents || 0));
+            const rowTotal = item.type === 'labor'
+                ? Math.round(quantity * unitPrice)
+                : Math.round(unitPrice);
+            const description = item.type === 'labor'
+                ? 'Labor'
+                : (item.description || (item.type === 'material' ? 'Materials' : 'Other'));
+            const quantityValue = item.type === 'labor' && Number.isFinite(quantity) && quantity > 0 ? quantity : '';
+            const priceValue = item.type === 'labor' ? formatLaborRate(unitPrice) : '';
+            const rowTop = 50.7 + (index * 2.8);
+
+            return `
+                <div class="invoice-line-row" style="top:${rowTop}%;">
+                    <span class="${item.type === 'labor' ? 'invoice-line-description' : 'invoice-line-description-left'}">${esc(description)}</span>
+                    <span class="invoice-line-qty">${quantityValue}</span>
+                    <span class="invoice-line-price">${priceValue}</span>
+                    ${renderDecimalAmount(formatPlainAmount(rowTotal))}
+                </div>
+            `;
+        }).join('');
+
+        const amountDue = Math.max(0, Number(invoice.amountCents || invoice.subtotalCents || 0));
+        const issueDate = invoice.issueDate || getTodayLocalDate();
+        const clientNameValue = client ? client.name : 'Client Unassigned';
+        const billingAddressValue = client ? client.address : '';
+        const hasServiceAddress = Boolean(String(invoice.serviceAddress || '').trim());
+        const serviceAddressValue = hasServiceAddress ? invoice.serviceAddress : '';
+        const templateImage = hasServiceAddress ? 'invoice_template/blank_service_invoice.png' : 'invoice_template/blank_billing_invoice.png';
+
+        return `
+            <div class="invoice-print-page ${hasServiceAddress ? 'service-template' : 'billing-template'}">
+                <img class="invoice-print-template" src="${templateImage}" alt="" aria-hidden="true">
+                <span class="invoice-print-value invoice-print-client">${esc(clientNameValue)}</span>
+                <span class="invoice-print-value invoice-print-billing-address">${formatAddressHtml(billingAddressValue)}</span>
+                <span class="invoice-print-value invoice-print-address">${formatAddressHtml(serviceAddressValue)}</span>
+                <span class="invoice-print-value invoice-print-date">${formatInvoiceDate(issueDate)}</span>
+                <span class="invoice-print-value invoice-print-number">${esc(plainInvoiceNumber(invoice.invoiceNumber))}</span>
+                ${rows}
+                <div class="invoice-print-total">${renderDecimalAmount(formatPlainAmount(amountDue))}</div>
+            </div>
+        `;
+    }
+
+    function renderDecimalAmount(amountText) {
+        const decimalIndex = amountText.indexOf('.');
+        const integerPart = decimalIndex >= 0 ? amountText.slice(0, decimalIndex) : amountText;
+        const decimalPart = decimalIndex >= 0 ? amountText.slice(decimalIndex) : '';
+        return `<span class="invoice-amount-integer">${esc(integerPart)}</span><span class="invoice-amount-decimal">${esc(decimalPart)}</span>`;
+    }
+
+    function formatAddressHtml(address) {
+        const trimmed = String(address || '').trim();
+        if (!trimmed) {
+            return '';
+        }
+
+        const commaIndex = trimmed.indexOf(',');
+        if (commaIndex === -1) {
+            return esc(trimmed);
+        }
+
+        const streetLine = trimmed.slice(0, commaIndex).trim();
+        const cityStateLine = trimmed.slice(commaIndex + 1).trim();
+        return [streetLine, cityStateLine].filter(Boolean).map(esc).join('<br>');
+    }
+
+    function formatInvoiceDate(dateValue) {
+        if (!dateValue) {
+            return '—';
+        }
+
+        const localDateMatch = String(dateValue).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        const date = localDateMatch
+            ? new Date(Number(localDateMatch[1]), Number(localDateMatch[2]) - 1, Number(localDateMatch[3]))
+            : new Date(dateValue);
+        if (Number.isNaN(date.getTime())) {
+            return String(dateValue);
+        }
+
+        const formatted = new Intl.DateTimeFormat('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+        }).format(date);
+        return formatted.replace(/\b(\d{1,2})\b/, (_, day) => `${day}${dateOrdinalSuffix(Number(day))}`);
+    }
+
+    function dateOrdinalSuffix(day) {
+        if (day % 100 >= 11 && day % 100 <= 13) {
+            return 'th';
+        }
+
+        return ({ 1: 'st', 2: 'nd', 3: 'rd' })[day % 10] || 'th';
+    }
+
+    function formatPlainAmount(cents) {
+        return (Number(cents || 0) / 100).toFixed(2);
+    }
+
+    function formatLaborRate(cents) {
+        return String(Math.round(Number(cents || 0) / 100));
+    }
+
+    function plainInvoiceNumber(invoiceNumber) {
+        const match = String(invoiceNumber || '').match(/\d+/);
+        return match ? match[0] : String(invoiceNumber || '1031');
+    }
+
+    function openInvoicePrintPreview(invoiceId) {
+        const invoice = adminInvoices.find((entry) => entry.id === invoiceId);
+        if (!invoice) {
+            return;
+        }
+
+        invoicePrintNumber = invoice.invoiceNumber || '';
+        $('invoice-print-content').innerHTML = buildInvoicePrintMarkup(invoice);
+        openModal('modal-invoice-print');
+    }
+
+    function renderContracts(contracts) {
+        allContracts = contracts;
+        renderContractsTable();
+    }
+
+    function renderContractsTable() {
+        let contracts = contractFilterClientId
+            ? allContracts.filter((contract) => (contract.accountId || contract.clientId) === contractFilterClientId)
+            : allContracts.slice();
+
+        if (contractFilterStatus) {
+            contracts = contracts.filter((contract) => contract.status === contractFilterStatus);
+        }
+
+        contracts = sortRows(contracts, contractSortValue, {
+            startDate: (contract) => contract.startDate || contract.createdAt || '',
+            client: (contract) => clientName(contract.accountId || contract.clientId).toLowerCase(),
+            status: (contract) => contract.status || '',
+        });
+
+        if (!contracts.length) {
+            $('contracts-tbody').innerHTML = '<tr><td colspan="6" class="admin-empty">No contracts match the current filters.</td></tr>';
+            $('mobile-contracts-list').innerHTML = '<p class="admin-empty">No contracts match the current filters.</p>';
+            return;
+        }
+
+        $('contracts-tbody').innerHTML = contracts.map((contract) => `
+            <tr>
+                <td>${esc(contract.contractNumber)}</td>
+                <td><span class="contract-status-indicators"><span class="admin-badge badge-${esc(contract.status)}">${esc(contract.status)}</span><span class="admin-badge badge-${contract.paymentStatus === 'Paid' ? 'paid' : 'draft'}">${esc(contract.paymentStatus || 'Unpaid')}</span></span></td>
+                <td>${esc(clientName(contract.accountId || contract.clientId))}</td>
+                <td><div class="contract-table-metadata"><span>${esc(contractPackageLabel(contract))}</span><span>${esc(contract.billingCycle || 'monthly')}</span></div></td>
+                <td><div class="contract-table-metadata"><span>Start: ${esc(fmtDate(contract.startDate) || '—')}</span><span>Next due: ${esc(fmtDate(contract.nextPaymentDueAt) || '—')}</span></div></td>
+                <td><div class="contract-table-actions">
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost" data-edit-contract="${esc(contract.id)}">Edit</button>
+                    ${contract.status === 'draft' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-entity="contract" data-id="${contract.id}" data-status="active">Activate</button>` : ''}
+                    ${contract.status === 'active' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-entity="contract" data-id="${contract.id}" data-status="cancelled">Cancel</button>` : ''}
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost admin-btn-remove" data-delete-contract="${esc(contract.id)}">Remove</button>
+                </div></td>
+            </tr>
+        `).join('');
+        $('mobile-contracts-list').innerHTML = contracts.map((contract) => {
+            const actions = `
+                <button class="admin-btn admin-btn-sm admin-btn-ghost" data-edit-contract="${esc(contract.id)}">Edit</button>
+                ${contract.status === 'draft' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-entity="contract" data-id="${esc(contract.id)}" data-status="active">Activate</button>` : ''}
+                ${contract.status === 'active' ? `<button class="admin-btn admin-btn-sm admin-btn-ghost" data-entity="contract" data-id="${esc(contract.id)}" data-status="cancelled">Cancel</button>` : ''}
+                <button class="admin-btn admin-btn-sm admin-btn-ghost admin-btn-remove" data-delete-contract="${esc(contract.id)}">Remove</button>
+            `;
+            return mobileRecordCard(
+                contract.contractNumber,
+                `<span class="contract-status-indicators"><span class="admin-badge badge-${esc(contract.status)}">${esc(contract.status)}</span><span class="admin-badge badge-${contract.paymentStatus === 'Paid' ? 'paid' : 'draft'}">${esc(contract.paymentStatus || 'Unpaid')}</span></span>`,
+                clientName(contract.accountId || contract.clientId),
+                [
+                    ['Next due', fmtDate(contract.nextPaymentDueAt) || '—'],
+                    ...contractPackageDetails(contract),
+                    ['Billing cycle', contract.billingCycle],
+                    ['Start date', contract.startDate || '—'],
+                ],
+                actions,
+                true,
+            );
+        }).join('');
+    }
+
+    function renderContractors() {
+        const activeContractors = allContractors.filter((contractor) => contractor.status === 'active');
+        $('invoice-contractor-actions').innerHTML = activeContractors.map((contractor) =>
+            `<button type="button" class="admin-btn admin-btn-sm admin-btn-ghost" data-add-contractor-hours="${esc(contractor.id)}">+ ${esc(contractor.name)}</button>`).join('');
+        populateContractorTaxYearOptions();
+        updateContractorTaxPeriodVisibility();
+        renderContractorsTable();
+    }
+
+    function getContractorPaymentReportDate(payment) {
+        const invoice = adminInvoices.find((entry) => entry.id === payment.invoiceId);
+        if (invoice) {
+            return String(invoice.issueDate || payment.date || invoice.updatedAt || payment.createdAt || '').slice(0, 10);
+        }
+        const date = payment.status === 'paid'
+            ? payment.paidAt || payment.date
+            : payment.date;
+        return String(date || payment.createdAt || '').slice(0, 10);
+    }
+
+    function populateContractorTaxYearOptions() {
+        const select = $('contractor-tax-year');
+        const previousYear = select.value;
+        const currentYear = String(new Date().getFullYear());
+        const years = new Set([currentYear]);
+        contractorPayments.forEach((payment) => {
+            const year = getContractorPaymentReportDate(payment).slice(0, 4);
+            if (/^\d{4}$/.test(year)) {
+                years.add(year);
+            }
+        });
+        ownerHourEntries.forEach((entry) => {
+            const year = String(entry.date || '').slice(0, 4);
+            if (/^\d{4}$/.test(year)) {
+                years.add(year);
+            }
+        });
+        const sortedYears = Array.from(years).sort((first, second) => Number(second) - Number(first));
+        select.innerHTML = sortedYears.map((year) => `<option value="${year}">${year}</option>`).join('');
+        select.value = sortedYears.includes(previousYear) ? previousYear : currentYear;
+    }
+
+    function updateContractorTaxPeriodVisibility() {
+        const period = $('contractor-tax-period').value;
+        $('contractor-tax-quarter-wrapper').hidden = period !== 'quarter';
+        $('contractor-tax-month-wrapper').hidden = period !== 'month';
+    }
+
+    function getFilteredContractorPayments() {
+        const year = $('contractor-tax-year').value;
+        const period = $('contractor-tax-period').value;
+        const quarter = Number($('contractor-tax-quarter').value);
+        const month = Number($('contractor-tax-month').value);
+
+        return contractorPayments.filter((payment) => {
+            const contractor = allContractors.find((entry) => entry.id === payment.contractorId);
+            if (contractor?.isOwner) {
+                return false;
+            }
+
+            const dateMatch = getContractorPaymentReportDate(payment).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!dateMatch || dateMatch[1] !== year) {
+                return false;
+            }
+            const paymentMonth = Number(dateMatch[2]);
+            if (period === 'quarter' && Math.ceil(paymentMonth / 3) !== quarter) {
+                return false;
+            }
+            if (period === 'month' && paymentMonth !== month) {
+                return false;
+            }
+            return true;
+        });
+    }
+
+    function summarizeContractorPayments(payments) {
+        const summaries = new Map();
+        payments.forEach((payment) => {
+            const summary = summaries.get(payment.contractorId) || { hours: 0, paidHours: 0, unpaidHours: 0, paidCents: 0, unpaidCents: 0 };
+            summary.hours += Number(payment.hours || 0);
+            const invoice = adminInvoices.find((entry) => entry.id === payment.invoiceId);
+            if ((invoice?.status ?? payment.status) === 'paid') {
+                summary.paidHours += Number(payment.hours || 0);
+                summary.paidCents += Number(payment.amountCents || 0);
+            } else {
+                summary.unpaidHours += Number(payment.hours || 0);
+                summary.unpaidCents += Number(payment.amountCents || 0);
+            }
+            summaries.set(payment.contractorId, summary);
+        });
+        return summaries;
+    }
+
+    function getFilteredOwnerHours() {
+        const year = $('contractor-tax-year').value;
+        const period = $('contractor-tax-period').value;
+        const quarter = Number($('contractor-tax-quarter').value);
+        const month = Number($('contractor-tax-month').value);
+
+        return ownerHourEntries.filter((entry) => {
+            const dateMatch = String(entry.date || '').slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!dateMatch || dateMatch[1] !== year) {
+                return false;
+            }
+            const entryMonth = Number(dateMatch[2]);
+            if (period === 'quarter' && Math.ceil(entryMonth / 3) !== quarter) {
+                return false;
+            }
+            if (period === 'month' && entryMonth !== month) {
+                return false;
+            }
+            return true;
+        });
+    }
+
+    function summarizeOwnerHours(entries) {
+        const summaries = new Map();
+        entries.forEach((entry) => {
+            const summary = summaries.get(entry.contractorId) || { paidHours: 0, unpaidHours: 0, paidCents: 0, unpaidCents: 0 };
+            const hours = Number(entry.hours || 0);
+            const amountCents = Math.round(hours * Number(entry.hourlyRateCents || 0));
+            if (entry.invoiceStatus === 'paid') {
+                summary.paidHours += hours;
+                summary.paidCents += amountCents;
+            } else {
+                summary.unpaidHours += hours;
+                summary.unpaidCents += amountCents;
+            }
+            summaries.set(entry.contractorId, summary);
+        });
+        return summaries;
+    }
+
+    function renderContractorsTable() {
+        const selectedPayments = getFilteredContractorPayments();
+        const paymentSummaries = summarizeContractorPayments(selectedPayments);
+        const ownerHourSummaries = summarizeOwnerHours(getFilteredOwnerHours());
+
+        if (!allContractors.length) {
+            $('contractors-tbody').innerHTML = '<tr><td colspan="7" class="admin-empty">No contractors found.</td></tr>';
+            $('mobile-contractors-list').innerHTML = '<p class="admin-empty">No contractors found.</p>';
+            return;
+        }
+
+        $('contractors-tbody').innerHTML = allContractors.map((contractor) => {
+            const paymentSummary = paymentSummaries.get(contractor.id) || { hours: 0, paidHours: 0, unpaidHours: 0, paidCents: 0, unpaidCents: 0 };
+            const ownerSummary = ownerHourSummaries.get(contractor.id) || { paidHours: 0, unpaidHours: 0, paidCents: 0, unpaidCents: 0 };
+            const paidHours = contractor.isOwner ? ownerSummary.paidHours : paymentSummary.paidHours;
+            const unpaidHours = contractor.isOwner ? ownerSummary.unpaidHours : paymentSummary.unpaidHours;
+            const totalHours = paidHours + unpaidHours;
+            const paidCents = contractor.isOwner ? ownerSummary.paidCents : paymentSummary.paidCents;
+            const unpaidCents = contractor.isOwner ? ownerSummary.unpaidCents : paymentSummary.unpaidCents;
+            const rateLabel = contractor.isOwner
+                ? `${formatCurrency(contractor.hourlyRateCents)}/hr base + $10/hr per overlapping contractor`
+                : `${formatCurrency(contractor.hourlyRateCents)}/hr`;
+            return `
+                <tr>
+                    <td>${esc(contractor.name)}${contractor.isOwner ? ' <span class="admin-badge badge-draft">Owner</span>' : ''}</td>
+                    <td><span class="admin-badge badge-${esc(contractor.status)}">${esc(contractor.status)}</span></td>
+                    <td>${rateLabel}</td>
+                    <td>${totalHours.toFixed(2)}</td>
+                    <td>${formatCurrency(paidCents)}</td>
+                    <td>${formatCurrency(unpaidCents)}</td>
+                    <td>
+                        <button class="admin-btn admin-btn-sm admin-btn-ghost" data-edit-contractor="${esc(contractor.id)}">Edit</button>
+                        ${!contractor.isOwner ? `<button class="admin-btn admin-btn-sm admin-btn-ghost admin-btn-remove" data-delete-contractor="${esc(contractor.id)}">Remove</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        $('mobile-contractors-list').innerHTML = allContractors.map((contractor) => {
+            const paymentSummary = paymentSummaries.get(contractor.id) || { hours: 0, paidHours: 0, unpaidHours: 0, paidCents: 0, unpaidCents: 0 };
+            const ownerSummary = ownerHourSummaries.get(contractor.id) || { paidHours: 0, unpaidHours: 0, paidCents: 0, unpaidCents: 0 };
+            const paidHours = contractor.isOwner ? ownerSummary.paidHours : paymentSummary.paidHours;
+            const unpaidHours = contractor.isOwner ? ownerSummary.unpaidHours : paymentSummary.unpaidHours;
+            const totalHours = paidHours + unpaidHours;
+            const paidCents = contractor.isOwner ? ownerSummary.paidCents : paymentSummary.paidCents;
+            const unpaidCents = contractor.isOwner ? ownerSummary.unpaidCents : paymentSummary.unpaidCents;
+            const rateLabel = contractor.isOwner
+                ? `${formatCurrency(contractor.hourlyRateCents)}/hr base + $10/hr per overlapping contractor`
+                : `${formatCurrency(contractor.hourlyRateCents)}/hr`;
+            return mobileRecordCard(
+                contractor.name,
+                `<span class="admin-badge badge-${esc(contractor.status)}">${contractor.isOwner ? 'Owner · ' : ''}${esc(contractor.status)}</span>`,
+                `${totalHours.toFixed(2)} hrs`,
+                [
+                    ['Pay rate', rateLabel],
+                    ['Paid amount', formatCurrency(paidCents)],
+                    ['Unpaid amount', formatCurrency(unpaidCents)],
+                ],
+                `
+                    <button class="admin-btn admin-btn-sm admin-btn-ghost" data-edit-contractor="${esc(contractor.id)}">Edit</button>
+                    ${!contractor.isOwner ? `<button class="admin-btn admin-btn-sm admin-btn-ghost admin-btn-remove" data-delete-contractor="${esc(contractor.id)}">Remove</button>` : ''}
+                `,
+                true,
+            );
+        }).join('');
+    }
+
+    document.addEventListener('click', (event) => {
+        const viewInvoiceButton = event.target.closest('[data-view-invoice]');
+        if (viewInvoiceButton) {
+            openPdfModal(viewInvoiceButton.dataset.viewInvoice);
+            return;
+        }
+
+        const editButton = event.target.closest('[data-edit-invoice]');
+        if (editButton) {
+            openInvoiceEditor(editButton.dataset.editInvoice);
+            return;
+        }
+
+        const deleteButton = event.target.closest('[data-delete-invoice]');
+        if (deleteButton) {
+            deleteInvoice(deleteButton.dataset.deleteInvoice);
+            return;
+        }
+
+        const finalizeInvoiceButton = event.target.closest('[data-finalize-invoice]');
+        if (finalizeInvoiceButton) {
+            finalizeOngoingInvoice(finalizeInvoiceButton.dataset.finalizeInvoice);
+            return;
+        }
+
+        const editClientButton = event.target.closest('[data-edit-client]');
+        if (editClientButton) {
+            openClientEditor(editClientButton.dataset.editClient);
+            return;
+        }
+
+        const editClientLoginButton = event.target.closest('[data-edit-client-login]');
+        if (editClientLoginButton) {
+            openClientLoginEditor(editClientLoginButton.dataset.editClientLogin);
+            return;
+        }
+
+        const viewClientInvoicesButton = event.target.closest('[data-view-client-invoices]');
+        if (viewClientInvoicesButton) {
+            const clientId = viewClientInvoicesButton.dataset.viewClientInvoices;
+            invoiceFilterClientId = clientId;
+            $('invoice-filter-client-select').value = clientId;
+            renderInvoicesTable();
+            setAdminTab('invoices');
+            return;
+        }
+
+        const deleteClientButton = event.target.closest('[data-delete-client]');
+        if (deleteClientButton) {
+            deleteClientRecord(deleteClientButton.dataset.deleteClient);
+            return;
+        }
+
+        const deleteContractorButton = event.target.closest('[data-delete-contractor]');
+        if (deleteContractorButton) {
+            deleteContractorRecord(deleteContractorButton.dataset.deleteContractor);
+            return;
+        }
+
+        const editContractButton = event.target.closest('[data-edit-contract]');
+        if (editContractButton) {
+            openContractEditor(editContractButton.dataset.editContract);
+            return;
+        }
+
+        const deleteContractButton = event.target.closest('[data-delete-contract]');
+        if (deleteContractButton) {
+            deleteContractRecord(deleteContractButton.dataset.deleteContract);
+            return;
+        }
+
+        const editContractorButton = event.target.closest('[data-edit-contractor]');
+        if (editContractorButton) {
+            openContractorEditor(editContractorButton.dataset.editContractor);
+            return;
+        }
+
+        const button = event.target.closest('[data-entity][data-id][data-status]');
+        if (!button) {
+            return;
+        }
+
+        updateStatus(button.dataset.entity, button.dataset.id, button.dataset.status);
+    });
+
+    async function deleteContractRecord(contractId) {
+        const contract = allContracts.find((entry) => entry.id === contractId);
+        if (!contract || !window.confirm(`Remove contract ${contract.contractNumber}? This cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await apiFetch(`/api/contracts/${encodeURIComponent(contractId)}`, { method: 'DELETE' });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Unable to remove contract.');
+            }
+            await loadContracts();
+            await loadSummary();
+        } catch (error) {
+            window.alert(error.message || 'Unable to remove contract.');
+        }
+    }
+
+    function openNewContractorForm() {
+        editingContractorId = null;
+        const form = $('form-contractor');
+        form.reset();
+        form.elements.namedItem('status').disabled = false;
+        $('contractor-status-label').classList.remove('hidden');
+        $('contractor-modal-title').textContent = 'New Contractor';
+        $('contractor-submit-button').textContent = 'Create Contractor';
+        openModal('modal-contractor');
+    }
+
+    function openContractorEditor(contractorId) {
+        const contractor = allContractors.find((entry) => entry.id === contractorId);
+        if (!contractor) {
+            return;
+        }
+
+        editingContractorId = contractor.id;
+        const form = $('form-contractor');
+        form.reset();
+        form.elements.namedItem('name').value = contractor.name;
+        form.elements.namedItem('hourlyRate').value = (Number(contractor.hourlyRateCents || 0) / 100).toFixed(2);
+        form.elements.namedItem('status').value = contractor.status;
+        form.elements.namedItem('status').disabled = contractor.isOwner;
+        $('contractor-status-label').classList.toggle('hidden', contractor.isOwner);
+        $('contractor-modal-title').textContent = `Edit ${contractor.name}`;
+        $('contractor-submit-button').textContent = 'Save Changes';
+        openModal('modal-contractor');
+    }
+
+    function openContractEditor(contractId) {
+        const contract = allContracts.find((entry) => entry.id === contractId);
+        if (!contract) {
+            return;
+        }
+
+        editingContractId = contract.id;
+        const form = $('form-new-contract');
+        form.reset();
+        form.elements.namedItem('clientId').value = contract.accountId || contract.clientId || '';
+        $('contract-package-type').value = contract.packageType || '';
+        $('contract-package-type').dispatchEvent(new Event('change', { bubbles: true }));
+        $('contract-package-level').value = contract.packageLevel || '';
+        form.elements.namedItem('packageMonthlyCost').value = contract.packageMonthlyCostCents == null
+            ? ''
+            : (Number(contract.packageMonthlyCostCents) / 100).toFixed(2);
+        form.elements.namedItem('packageRetainerHours').value = contract.packageRetainerHours ?? '';
+        form.elements.namedItem('packageRolloverHours').value = contract.packageRolloverHours ?? 0;
+        form.elements.namedItem('packageDiscountPercent').value = contract.packageDiscountPercent ?? 0;
+        form.elements.namedItem('packagePriorityScheduling').checked = Boolean(contract.packagePriorityScheduling);
+        form.elements.namedItem('packageAnnualInspection').checked = Boolean(contract.packageAnnualInspection);
+        form.elements.namedItem('packageQuarterlyInspection').checked = Boolean(contract.packageQuarterlyInspection);
+        form.elements.namedItem('packageOnCallService').checked = Boolean(contract.packageOnCallService);
+        form.elements.namedItem('packageTenantCoordination').checked = Boolean(contract.packageTenantCoordination);
+        form.elements.namedItem('billingCycle').value = contract.billingCycle || 'monthly';
+        form.elements.namedItem('startDate').value = contract.startDate || '';
+        $('contract-modal-title').textContent = `Edit Contract ${contract.contractNumber || ''}`.trim();
+        $('contract-submit-button').textContent = 'Save Contract Changes';
+        openModal('modal-new-contract');
+    }
+
+    function openClientEditor(clientId) {
+        const client = allClients.find((entry) => entry.id === clientId);
+        if (!client) {
+            return;
+        }
+
+        editingClientId = client.id;
+        $('form-new-client').reset();
+        $('form-new-client').elements.name.value = client.name;
+        setClientAddressParts($('client-billing-address'), client.address);
+        resetClientServiceAddressRows();
+        if (Array.isArray(client.serviceAddresses) && client.serviceAddresses.length) {
+            client.serviceAddresses.forEach((address) => addClientServiceAddressRow(address));
+        }
+        $('client-modal-title').textContent = `Edit ${client.name}`;
+        $('client-submit-button').textContent = 'Update Client';
+        openModal('modal-new-client');
+    }
+
+    function openClientLoginEditor(clientId) {
+        const client = allClients.find((entry) => entry.id === clientId);
+        if (!client) {
+            return;
+        }
+
+        editingClientLoginId = client.id;
+        const form = $('form-client-login');
+        form.reset();
+        form.elements.namedItem('email').value = client.clientLoginEmail || '';
+        form.elements.namedItem('password').required = !client.clientLoginEnabled;
+        $('client-login-modal-title').textContent = client.clientLoginEnabled
+            ? `Edit Login for ${client.name}`
+            : `Set Login for ${client.name}`;
+        $('client-login-submit-button').textContent = client.clientLoginEnabled ? 'Save Login' : 'Create Login';
+        setMsg('msg-client-login', '', false);
+        openModal('modal-client-login');
+    }
+
+    function addClientServiceAddressRow(value = '') {
+        const container = $('client-service-addresses-container');
+        const row = document.createElement('div');
+        row.className = 'client-service-address-row';
+        row.innerHTML = `
+            <div class="client-service-address-header">
+                <h4 class="client-service-address-title">Service Address</h4>
+                <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost client-service-address-remove-btn">Remove</button>
+            </div>
+            <div class="client-address-fields">
+                <label class="client-address-street">Street Address <input data-address-part="street" autocomplete="address-line1" required></label>
+                <label class="client-address-city">City <input data-address-part="city" autocomplete="address-level2" required></label>
+                <label>State <select data-address-part="state" data-state-select autocomplete="address-level1" required></select></label>
+                <label>ZIP Code <input data-address-part="zip" autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10"></label>
+            </div>
+        `;
+        portal.populateStateSelects(row);
+        setClientAddressParts(row, value);
+        row.querySelector('.client-service-address-remove-btn').addEventListener('click', () => row.remove());
+        container.appendChild(row);
+    }
+
+    function getClientServiceAddressRows() {
+        return Array.from(document.querySelectorAll('.client-service-address-row'))
+            .map((row) => formatClientAddress(getClientAddressParts(row)))
+            .filter(Boolean);
+    }
+
+    function getClientAddressParts(container) {
+        return Object.fromEntries(Array.from(container.querySelectorAll('[data-address-part]'))
+            .map((input) => [input.dataset.addressPart, input.value.trim()]));
+    }
+
+    function setClientAddressParts(container, address) {
+        const parts = parseClientAddress(address);
+        Array.from(container.querySelectorAll('[data-address-part]')).forEach((input) => {
+            input.value = parts[input.dataset.addressPart] || '';
+        });
+    }
+
+    function parseClientAddress(address) {
+        return portal.parseClientAddress(address);
+    }
+
+    function formatClientAddress(parts) {
+        return portal.formatClientAddress(parts);
+    }
+
+    function resetClientServiceAddressRows() {
+        $('client-service-addresses-container').innerHTML = '';
+    }
+
+    async function deleteClientRecord(clientId) {
+        const client = allClients.find((entry) => entry.id === clientId);
+        if (!client) {
+            return;
+        }
+
+        if (!window.confirm(`Remove client ${client.name}? This cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await apiFetch(`/api/clients/${encodeURIComponent(clientId)}`, {
+                method: 'DELETE',
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Unable to remove client.');
+            }
+
+            await loadClients();
+            await loadSummary();
+        } catch (error) {
+            window.alert('Unable to remove client: ' + error.message);
+        }
+    }
+
+    async function deleteContractorRecord(contractorId) {
+        const contractor = allContractors.find((entry) => entry.id === contractorId);
+        if (!contractor || contractor.isOwner) {
+            return;
+        }
+        if (!window.confirm(`Remove contractor ${contractor.name}? Contractors with recorded hours or payments cannot be removed.`)) {
+            return;
+        }
+
+        try {
+            const response = await apiFetch(`/api/contractors/${encodeURIComponent(contractorId)}`, { method: 'DELETE' });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Unable to remove contractor.');
+            }
+            await loadContractors();
+            await loadSummary();
+        } catch (error) {
+            window.alert('Unable to remove contractor: ' + error.message);
+        }
+    }
+
+    function openInvoiceEditor(invoiceId) {
+        const invoice = adminInvoices.find((entry) => entry.id === invoiceId);
+        if (!invoice || invoice.status === 'paid' || invoice.status === 'void') {
+            return;
+        }
+
+        editingInvoiceId = invoice.id;
+        resetInvoiceItemRows();
+        $('invoice-contractor-hours-container').innerHTML = '';
+        $('form-new-invoice').reset();
+        if (!allClients.some((clientEntry) => clientEntry.id === (invoice.accountId || invoice.clientId)) && invoice.clientSnapshot) {
+            const snapshotOption = document.createElement('option');
+            snapshotOption.value = invoice.clientSnapshot.id;
+            snapshotOption.textContent = invoice.clientSnapshot.name;
+            $('invoice-client-select').append(snapshotOption);
+        }
+        $('invoice-client-select').value = invoice.accountId || invoice.clientId || '';
+        populateInvoiceServiceAddressSelect($('invoice-client-select').value || '');
+        if (invoice.serviceAddress && !Array.from($('invoice-service-address-select').options).some((option) => option.value === invoice.serviceAddress)) {
+            const serviceOption = document.createElement('option');
+            serviceOption.value = invoice.serviceAddress;
+            serviceOption.textContent = invoice.serviceAddress;
+            $('invoice-service-address-select').append(serviceOption);
+            $('invoice-service-address-wrapper').classList.remove('hidden');
+        }
+        const client = allClients.find((entry) => entry.id === (invoice.accountId || invoice.clientId)) || null;
+        const presetServiceAddress = invoice.serviceAddress || '';
+        $('invoice-service-address-select').value = presetServiceAddress || '';
+        $('invoice-job-name').value = invoice.jobName || '';
+        $('invoice-is-ongoing').checked = invoice.status === 'ongoing';
+        $('invoice-is-ongoing').disabled = invoice.status !== 'ongoing';
+        $('invoice-job-name-wrapper').classList.toggle('hidden', invoice.status !== 'ongoing');
+        $('invoice-issue-date').value = invoice.issueDate || getTodayLocalDate();
+        $('invoice-total-display').value = (Number(invoice.amountCents || 0) / 100).toFixed(2);
+        (invoice.contractorHours || []).forEach((entry) => addContractorHoursRow(entry));
+        if (!Array.isArray(invoice.contractorHours)) {
+            (invoice.lineItems || []).filter((item) => item.type === 'labor').forEach((item) => addInvoiceItemRow({
+                ...item,
+                description: 'Labor',
+                rateOverride: Number(item.unitPriceCents || 0) / 100,
+            }));
+        }
+        (invoice.lineItems || []).filter((item) => item.type !== 'labor').forEach((item) => addInvoiceItemRow({
+            ...item,
+            description: item.description,
+        }));
+        updateInvoiceTotals();
+        $('invoice-modal-title').textContent = invoice.status === 'ongoing'
+            ? `Edit ${invoice.jobName || 'Ongoing Job'}`
+            : `Edit ${invoice.invoiceNumber}`;
+        $('invoice-submit-button').textContent = invoice.status === 'ongoing' ? 'Save Ongoing Job' : 'Update Invoice';
+        openModal('modal-new-invoice');
+    }
+
+    async function deleteInvoice(invoiceId) {
+        const invoice = adminInvoices.find((entry) => entry.id === invoiceId);
+        if (!invoice || invoice.status === 'paid' || invoice.status === 'void') {
+            return;
+        }
+
+        if (!window.confirm(`Remove invoice ${invoice.invoiceNumber || invoice.jobName || 'this ongoing job'}? This cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await apiFetch(`/api/invoices/${encodeURIComponent(invoiceId)}`, {
+                method: 'DELETE',
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Unable to remove invoice.');
+            }
+
+            await loadInvoices();
+            await loadSummary();
+        } catch (error) {
+            window.alert('Unable to remove invoice: ' + error.message);
+        }
+    }
+
+    async function finalizeOngoingInvoice(invoiceId) {
+        const invoice = adminInvoices.find((entry) => entry.id === invoiceId);
+        if (!invoice || invoice.status !== 'ongoing') {
+            return;
+        }
+        if (!window.confirm(`Create and number an invoice for ${invoice.jobName || 'this ongoing job'} now?`)) {
+            return;
+        }
+
+        try {
+            const response = await apiFetch(`/api/invoices/${encodeURIComponent(invoiceId)}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ isOngoing: false }),
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Unable to create invoice.');
+            }
+            await loadInvoices();
+            await loadContractors();
+            await loadSummary();
+        } catch (error) {
+            window.alert(error.message);
+        }
+    }
+
+    function apiFetch(path, options = {}) {
+        return fetch(`${apiBase}${path}`, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminToken}`,
+                ...(options.headers || {}),
+            },
+        });
+    }
+
+    function populateClientSelects(clients) {
+        ['invoice-client-select', 'contract-client-select'].forEach((selectId) => {
+            const select = $(selectId);
+            const previousValue = select.value;
+            select.innerHTML = '<option value="">Select a client…</option>'
+                + clients.map((client) => `<option value="${esc(client.id)}">${esc(client.name)}</option>`).join('');
+            if (previousValue) {
+                select.value = previousValue;
+            }
+        });
+    }
+
+    function populateFilterClientSelects(clients) {
+        ['invoice-filter-client-select', 'contract-filter-client-select'].forEach((selectId) => {
+            const select = $(selectId);
+            const previousValue = select.value;
+            select.innerHTML = '<option value="">All Clients</option>'
+                + clients.map((client) => `<option value="${esc(client.id)}">${esc(client.name)}</option>`).join('');
+            select.value = previousValue;
+        });
+    }
+
+    function sortRows(rows, sortValue, fieldGetters) {
+        const [field, direction] = String(sortValue || '').split('-');
+        const getter = fieldGetters[field];
+        if (!getter) {
+            return rows;
+        }
+
+        const sorted = rows.slice().sort((a, b) => {
+            const valueA = getter(a);
+            const valueB = getter(b);
+            if (valueA < valueB) return -1;
+            if (valueA > valueB) return 1;
+            return 0;
+        });
+
+        return direction === 'desc' ? sorted.reverse() : sorted;
+    }
+
+    function populateInvoiceServiceAddressSelect(clientId) {
+        const select = $('invoice-service-address-select');
+        const wrapper = $('invoice-service-address-wrapper');
+        const client = allClients.find((entry) => entry.id === clientId) || null;
+        const addresses = client && Array.isArray(client.serviceAddresses)
+            ? client.serviceAddresses.filter((address) => String(address || '').trim())
+            : [];
+
+        select.innerHTML = '<option value="">Select a service address…</option>'
+            + addresses.map((address) => `<option value="${esc(address)}">${esc(address)}</option>`).join('');
+
+        if (addresses.length > 0) {
+            wrapper.classList.remove('hidden');
+            select.value = '';
+        } else {
+            wrapper.classList.add('hidden');
+            select.value = '';
+        }
+    }
+
+    $('invoice-client-select').addEventListener('change', () => {
+        populateInvoiceServiceAddressSelect($('invoice-client-select').value || '');
+    });
+
+    $('invoice-is-ongoing').addEventListener('change', () => {
+        const isOngoing = $('invoice-is-ongoing').checked;
+        $('invoice-job-name-wrapper').classList.toggle('hidden', !isOngoing);
+        if (!isOngoing) {
+            $('invoice-job-name').value = '';
+        }
+        $('invoice-submit-button').textContent = isOngoing ? 'Save Ongoing Job' : 'Create Invoice';
+    });
+
+    $('invoice-contractor-actions').addEventListener('click', (event) => {
+        const button = event.target.closest('[data-add-contractor-hours]');
+        if (button) {
+            addContractorHoursRow({ contractorId: button.dataset.addContractorHours });
+        }
+    });
+
+    $('invoice-contractor-hours-container').addEventListener('input', (event) => {
+        if (event.target.matches('[data-contractor-hours]')) {
+            updateInvoiceTotals();
+        }
+    });
+
+    $('invoice-contractor-hours-container').addEventListener('change', (event) => {
+        if (event.target.matches('[data-contractor-id]')) updateInvoiceTotals();
+    });
+
+    function addInvoiceItemRow(initialValues = {}) {
+        const container = $('invoice-items-container');
+        const row = document.createElement('div');
+        const type = initialValues.type || 'labor';
+        const hourlyRateDollars = Number(initialValues.rateOverride ?? (Number(initialValues.unitPriceCents || 0) / 100) ?? 0);
+        const rateCents = Math.round(hourlyRateDollars * 100);
+        const label = type === 'material' ? 'Materials' : type === 'package' ? 'Other' : 'Labor';
+        row.className = 'invoice-item-row';
+
+        if (type === 'labor') {
+            row.innerHTML = `
+                <span class="invoice-item-trigger invoice-item-kind">${label}</span>
+                <div class="invoice-item-value-group">
+                    <label class="invoice-item-inline-label">Hours
+                        <input class="invoice-item-input" data-field="quantity" type="number" min="0" step="0.25" value="${Number(initialValues.quantity || 1)}" placeholder="Hours" />
+                    </label>
+                </div>
+                <input type="hidden" data-field="type" value="${type}" />
+                <input type="hidden" data-field="unitPriceCents" value="${rateCents}" />
+                <input type="hidden" data-field="description" value="${esc(initialValues.description || label)}" />
+                <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost invoice-remove-row-btn">Remove</button>
+            `;
+        } else if (type === 'material') {
+            row.innerHTML = `
+                <span class="invoice-item-trigger invoice-item-kind">Materials</span>
+                <div class="invoice-item-value-group">
+                    <label class="invoice-item-inline-label">Total
+                        <input class="invoice-item-input" data-field="unitPriceCents" type="number" min="0" step="0.01" value="${Number(initialValues.unitPriceCents || 0) / 100}" placeholder="0.00" />
+                    </label>
+                </div>
+                <input type="hidden" data-field="type" value="${type}" />
+                <input type="hidden" data-field="quantity" value="1" />
+                <input type="hidden" data-field="description" value="Materials" />
+                <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost invoice-remove-row-btn">Remove</button>
+            `;
+        } else {
+            row.innerHTML = `
+                <span class="invoice-item-trigger invoice-item-kind">Other</span>
+                <div class="invoice-item-value-group invoice-item-description-input">
+                    <label class="invoice-item-inline-label invoice-item-description-label">Description
+                        <input class="invoice-item-input" data-field="description" type="text" value="${esc(initialValues.description || '')}" placeholder="Enter item description" required />
+                    </label>
+                    <label class="invoice-item-inline-label">Total
+                        <input class="invoice-item-input" data-field="unitPriceCents" type="number" min="0" step="0.01" value="${Number(initialValues.unitPriceCents || 0) / 100}" placeholder="0.00" />
+                    </label>
+                </div>
+                <input type="hidden" data-field="type" value="${type}" />
+                <input type="hidden" data-field="quantity" value="1" />
+                <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost invoice-remove-row-btn">Remove</button>
+            `;
+        }
+
+        row.querySelector('.invoice-remove-row-btn').addEventListener('click', () => {
+            row.remove();
+            updateInvoiceTotals();
+        });
+
+        container.appendChild(row);
+        updateInvoiceTotals();
+    }
+
+    function addContractorHoursRow(initialValues = {}) {
+        const container = $('invoice-contractor-hours-container');
+        const row = document.createElement('div');
+        const availableContractors = allContractors.filter((contractor) => contractor.status === 'active'
+            || contractor.id === initialValues.contractorId);
+        const contractorId = initialValues.contractorId || availableContractors[0]?.id || '';
+        row.className = 'invoice-item-row invoice-contractor-row';
+        const contractor = allContractors.find((entry) => entry.id === contractorId);
+        const hourlyRateCents = Number(initialValues.hourlyRateCents ?? contractor?.hourlyRateCents ?? 0);
+        row.innerHTML = `
+            <label class="invoice-item-inline-label">Contractor
+                <select data-contractor-id>
+                    ${availableContractors.map((contractor) => `<option value="${esc(contractor.id)}" ${contractor.id === contractorId ? 'selected' : ''}>${esc(contractor.name)}</option>`).join('')}
+                </select>
+            </label>
+            <label class="invoice-item-inline-label">Hours
+                <input class="invoice-item-input" data-contractor-hours type="number" min="0.25" step="0.25" value="${Number(initialValues.hours || 1)}">
+            </label>
+            <span class="invoice-contractor-rate" data-hourly-rate-cents="${hourlyRateCents}">${formatCurrency(getContractorInvoiceRateCents(contractor, hourlyRateCents))}/hr</span>
+            <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost invoice-remove-row-btn">Remove</button>
+        `;
+        row.querySelector('[data-contractor-id]').addEventListener('change', (event) => {
+            const contractor = allContractors.find((entry) => entry.id === event.target.value);
+            const rateDisplay = row.querySelector('.invoice-contractor-rate');
+            rateDisplay.dataset.hourlyRateCents = String(contractor?.hourlyRateCents || 0);
+            rateDisplay.textContent = `${formatCurrency(getContractorInvoiceRateCents(contractor))}/hr`;
+            updateInvoiceTotals();
+        });
+        row.querySelector('.invoice-remove-row-btn').addEventListener('click', () => {
+            row.remove();
+            updateInvoiceTotals();
+        });
+        container.appendChild(row);
+        updateInvoiceTotals();
+    }
+
+    function getContractorHoursRows() {
+        return Array.from(document.querySelectorAll('#invoice-contractor-hours-container .invoice-contractor-row')).map((row) => ({
+            contractorId: row.querySelector('[data-contractor-id]').value,
+            hours: Number(row.querySelector('[data-contractor-hours]').value || 0),
+            hourlyRateCents: Number(row.querySelector('[data-hourly-rate-cents]').dataset.hourlyRateCents || 0),
+        })).filter((entry) => entry.contractorId && entry.hours > 0);
+    }
+
+    function getContractorInvoiceRateCents(contractor, hourlyRateCents = contractor?.hourlyRateCents) {
+        return Number(hourlyRateCents || 0) + (contractor && !contractor.isOwner ? 1_000 : 0);
+    }
+
+    function buildContractorLaborItems(contractorHours) {
+        const combinedHours = new Map();
+        contractorHours.forEach((entry) => {
+            const contractor = allContractors.find((candidate) => candidate.id === entry.contractorId);
+            if (!contractor) {
+                return;
+            }
+            const current = combinedHours.get(entry.contractorId) || {
+                contractorId: entry.contractorId,
+                hours: 0,
+                hourlyRateCents: entry.hourlyRateCents ?? contractor.hourlyRateCents,
+            };
+            current.hours += Number(entry.hours || 0);
+            combinedHours.set(entry.contractorId, current);
+        });
+        const entries = Array.from(combinedHours.values());
+        const hourLevels = [...new Set(entries.map((entry) => entry.hours))].sort((first, second) => first - second);
+        const laborItems = [];
+        let previousHours = 0;
+        hourLevels.forEach((hourLevel) => {
+            const hours = hourLevel - previousHours;
+            const activeContractors = entries.filter((entry) => entry.hours >= hourLevel);
+            const hourlyRateCents = activeContractors.reduce((sum, entry) => {
+                const contractor = allContractors.find((candidate) => candidate.id === entry.contractorId);
+                return sum + getContractorInvoiceRateCents(contractor, entry.hourlyRateCents);
+            }, 0);
+            if (hours > 0 && hourlyRateCents > 0) {
+                laborItems.push({ type: 'labor', description: 'Labor', quantity: hours, unitPriceCents: hourlyRateCents });
+            }
+            previousHours = hourLevel;
+        });
+        return laborItems;
+    }
+
+    function getInvoiceItemRows() {
+        return Array.from(document.querySelectorAll('#invoice-items-container .invoice-item-row')).map((row) => {
+            const type = row.querySelector('[data-field="type"]').value;
+            const description = (row.querySelector('[data-field="description"]').value || '').trim();
+            const quantity = Number(row.querySelector('[data-field="quantity"]')?.value || 1);
+            const rawUnitPrice = Number(row.querySelector('[data-field="unitPriceCents"]').value || 0);
+            const unitPriceCents = type === 'labor'
+                ? Math.round(rawUnitPrice)
+                : Math.round(rawUnitPrice * 100);
+
+            return {
+                type,
+                description,
+                quantity,
+                unitPriceCents,
+            };
+        }).filter((item) => item.description.length > 0 || item.type === 'material' || item.type === 'package');
+    }
+
+    function updateInvoiceTotals() {
+        const rows = getInvoiceItemRows();
+        const contractorLabor = buildContractorLaborItems(getContractorHoursRows());
+        const subtotalCents = rows.reduce((sum, item) => {
+            if (item.type === 'labor') {
+                return sum + Math.round(Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.unitPriceCents || 0)));
+            }
+            return sum + Math.max(0, Number(item.unitPriceCents || 0));
+        }, 0) + contractorLabor.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPriceCents), 0);
+        $('invoice-calculated-total').textContent = formatCurrency(subtotalCents);
+
+        const finalTotalInput = $('invoice-total-display');
+        const currentFinalTotal = Number(finalTotalInput.value || '0');
+        const previousCalculatedCents = Number(finalTotalInput.dataset.calculatedCents || 'NaN');
+
+        if (!Number.isFinite(currentFinalTotal) || currentFinalTotal <= 0 || Number.isFinite(previousCalculatedCents) && Math.round(currentFinalTotal * 100) === previousCalculatedCents) {
+            finalTotalInput.value = (subtotalCents / 100).toFixed(2);
+        }
+
+        finalTotalInput.dataset.calculatedCents = String(subtotalCents);
+    }
+
+    function resetInvoiceItemRows() {
+        const container = $('invoice-items-container');
+        container.innerHTML = '';
+        $('invoice-contractor-hours-container').innerHTML = '';
+        $('invoice-total-display').value = '0.00';
+        $('invoice-total-display').dataset.calculatedCents = '0';
+        $('invoice-calculated-total').textContent = '$0.00';
+    }
+
+    function setTodayInvoiceIssueDate() {
+        const input = $('invoice-issue-date');
+        if (!input) {
+            return;
+        }
+
+        input.value = getTodayLocalDate();
+    }
+
+    function getTodayLocalDate() {
+        const date = new Date();
+        const localOffset = date.getTimezoneOffset() * 60_000;
+        return new Date(date.getTime() - localOffset).toISOString().slice(0, 10);
+    }
+
+    function formatCurrency(cents) {
+        return `$${(Number(cents || 0) / 100).toFixed(2)}`;
+    }
+
+    function contractPackageLabel(contract) {
+        if (contract.packageType === 'custom') {
+            return `Custom · ${formatCurrency(contract.packageMonthlyCostCents)}/mo`;
+        }
+        if (!contract.packageType || !contract.packageLevel) {
+            return '—';
+        }
+        const type = contract.packageType === 'single_home' ? 'Single Home' : 'Portfolio';
+        const level = contract.packageLevel.charAt(0).toUpperCase() + contract.packageLevel.slice(1);
+        return `${type} · ${level}`;
+    }
+
+    function contractPackageDetails(contract) {
+        if (contract.packageType !== 'custom') {
+            return [['Package', contractPackageLabel(contract)]];
+        }
+
+        const includedServices = [
+            ['packagePriorityScheduling', 'Priority scheduling'],
+            ['packageAnnualInspection', 'Annual inspection'],
+            ['packageQuarterlyInspection', 'Quarterly inspection'],
+            ['packageOnCallService', 'On-call service'],
+            ['packageTenantCoordination', 'Tenant coordination'],
+        ].filter(([field]) => contract[field]).map(([, label]) => label);
+
+        return [
+            ['Package', contractPackageLabel(contract)],
+            ['Retainer', `${Number(contract.packageRetainerHours || 0)} hours`],
+            ['Rollover', `${Number(contract.packageRolloverHours || 0)} hours`],
+            ['Discount', `${Number(contract.packageDiscountPercent || 0)}%`],
+            ['Included services', includedServices.length ? includedServices.join(', ') : 'None'],
+        ];
+    }
+
+    function clientName(id) {
+        const client = allClients.find((entry) => entry.id === id);
+        if (client) {
+            return client.name;
+        }
+        const invoiceSnapshot = adminInvoices.find((invoice) => invoice.accountId === id && invoice.clientSnapshot?.name);
+        return invoiceSnapshot?.clientSnapshot.name || id || '—';
+    }
+
+    function fmtDate(value) {
+        if (!value) {
+            return '—';
+        }
+        return new Date(value).toLocaleDateString();
+    }
+
+    function esc(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function openModal(id) {
+        const element = $(id);
+        element.style.display = 'flex';
+        element.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(id) {
+        const element = $(id);
+        element.style.display = 'none';
+        element.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    function setMsg(id, message, isError) {
+        const element = $(id);
+        element.textContent = message;
+        element.className = 'admin-message ' + (isError ? 'admin-message-error' : 'admin-message-success');
+    }
+
+    function setPageMessage(message, isError) {
+        const element = $('admin-page-message');
+        element.textContent = message;
+        element.className = isError ? 'portal-page-message portal-message-error' : 'portal-page-message';
+    }
+</script>
+</body>
+</html>

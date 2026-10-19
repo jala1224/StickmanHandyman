@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18054809084"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'AW-18054809084');
+    </script>
+    <meta charset="UTF-8">
+    <title>Find Your Account | Stickman Handyman</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload" href="styles.css?v=20261007" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css?v=20261007"></noscript>
+    <style>
+        .nav-links a, .logo-bubble a {
+            color: #ccc;
+            text-decoration: none;
+        }
+        .nav-links a:hover, .logo-bubble a:hover {
+            color: white;
+        }
+        .nav-links a:visited, .logo-bubble a:visited,
+        .nav-links a:active, .logo-bubble a:active {
+            color: #ccc;
+        }
+        .nav-links a:visited:hover, .logo-bubble a:visited:hover,
+        .nav-links a:active:hover, .logo-bubble a:active:hover {
+            color: white;
+        }
+
+    </style>
+</head>
+<body class="portal-page">
+<div class="topnav">
+    <div class="logo-bubble">
+        <button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+        </button>
+        <a href="home.html"> Stickman Handyman </a>
+    </div>
+    <nav class="nav-links">
+        <a href="home.html">Home</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="maintenance-packages.html">Maintenance Packages</a>
+        <a href="portal-find.html" class="current-link">Account</a>
+        <a href="contact.html">Contact Us</a>
+    </nav>
+</div>
+
+<div class="content">
+    <section class="portal-layout-single portal-entry-layout page-heading-section">
+        <article class="portal-panel portal-intro-panel">
+            <h1 class="page-primary-title">Find your account</h1>
+            <p>Use your name and address to find your account.</p>
+            <form id="portal-lookup-form" class="portal-form">
+                <label for="portal-lookup-name">Name
+                    <input id="portal-lookup-name" name="name" type="text" autocomplete="name" autocapitalize="words" autocorrect="off" spellcheck="false" required>
+                </label>
+
+                <div class="portal-address-fields">
+                    <label class="portal-address-street">Street Address <input name="street" autocomplete="address-line1" autocapitalize="words" autocorrect="off" spellcheck="false" required></label>
+                    <label class="portal-address-city">City <input name="city" autocomplete="address-level2" autocapitalize="words" autocorrect="off" spellcheck="false" required></label>
+                    <label>State <select name="state" data-state-select autocomplete="address-level1" required></select></label>
+                    <label>ZIP Code <input name="zip" autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10"></label>
+                </div>
+
+                <button type="submit" class="portal-button">Find Account</button>
+            </form>
+            <p class="portal-link-row">
+                Already have login access?
+                <a class="portal-inline-link" href="portal-login.html">Sign in here.</a>
+            </p>
+            <p id="portal-lookup-message" class="portal-message" aria-live="polite"></p>
+        </article>
+    </section>
+</div>
+
+<footer>
+    <p>&copy; 2026 Stickman Handyman. All rights reserved.</p>
+</footer>
+<script src="portal-shared.js?v=20261007"></script>
+<script>
+    const portal = window.StickmanPortal;
+    portal.initTopnav();
+    portal.populateStateSelects();
+
+    const lookupForm = document.getElementById('portal-lookup-form');
+    const lookupMessage = document.getElementById('portal-lookup-message');
+
+    lookupForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        portal.clearLastLookupPayload();
+        setMessage(lookupMessage, 'Searching for your account...', false);
+
+        const apiBase = portal.readApiBase();
+        if (!apiBase) {
+            setMessage(lookupMessage, 'Unable to determine the backend address for this site.', true);
+            return;
+        }
+
+        const formData = new FormData(lookupForm);
+        try {
+            const payload = await portal.lookupAccount(apiBase, {
+                name: String(formData.get('name') || '').trim(),
+                address: portal.formatClientAddress({
+                    street: formData.get('street'),
+                    city: formData.get('city'),
+                    state: formData.get('state'),
+                    zip: formData.get('zip'),
+                }),
+            });
+
+            if (!portal.saveLastLookupPayload(payload)) {
+                throw new Error('Account found, but we could not prepare your details page. Please try again.');
+            }
+
+            window.location.href = 'portal-found.html';
+        } catch (error) {
+            portal.clearLookupAccess();
+            portal.clearLastLookupPayload();
+            setMessage(lookupMessage, error.message || 'No matching account found.', true);
+        }
+    });
+
+    function setMessage(element, message, isError) {
+        element.textContent = message;
+        element.className = isError ? 'portal-message portal-message-error' : 'portal-message portal-message-success';
+    }
+</script>
+</body>
+</html>
