@@ -40,9 +40,21 @@ CREATE TABLE IF NOT EXISTS contracts (
   account_id BIGINT NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
   contract_number TEXT NOT NULL,
   title TEXT,
+  scope TEXT,
+  service_address TEXT,
+  contract_type TEXT NOT NULL DEFAULT 'maintenance' CHECK (contract_type IN ('maintenance', 'labor')),
   status TEXT NOT NULL DEFAULT 'draft',
-  billing_cycle TEXT NOT NULL DEFAULT 'monthly',
+  billing_cycle TEXT DEFAULT 'monthly',
   start_date DATE,
+  labor_pricing_model TEXT CHECK (labor_pricing_model IS NULL OR labor_pricing_model IN ('fixed', 'hourly_estimate')),
+  labor_fixed_amount_cents INTEGER CHECK (labor_fixed_amount_cents IS NULL OR labor_fixed_amount_cents > 0),
+  labor_estimated_hours NUMERIC(7,2) CHECK (labor_estimated_hours IS NULL OR labor_estimated_hours > 0),
+  labor_estimated_amount_cents INTEGER CHECK (labor_estimated_amount_cents IS NULL OR labor_estimated_amount_cents >= 0),
+  labor_estimated_materials_cents INTEGER CHECK (labor_estimated_materials_cents IS NULL OR labor_estimated_materials_cents >= 0),
+  labor_estimated_materials_items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  labor_estimated_other_items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  labor_estimated_other_amount_cents INTEGER CHECK (labor_estimated_other_amount_cents IS NULL OR labor_estimated_other_amount_cents >= 0),
+  labor_estimated_contractor_hours JSONB NOT NULL DEFAULT '[]'::jsonb,
   package_type TEXT CHECK (package_type IS NULL OR package_type IN ('single_home', 'portfolio', 'custom')),
   package_level TEXT CHECK (package_level IS NULL OR package_level IN ('basic', 'pro', 'premium')),
   package_monthly_cost_cents INTEGER CHECK (package_monthly_cost_cents IS NULL OR package_monthly_cost_cents >= 0),
@@ -70,9 +82,40 @@ ALTER TABLE contracts ADD COLUMN IF NOT EXISTS package_annual_inspection BOOLEAN
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS package_quarterly_inspection BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS package_on_call_service BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS package_tenant_coordination BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS scope TEXT;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS service_address TEXT;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS contract_type TEXT NOT NULL DEFAULT 'maintenance';
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS labor_pricing_model TEXT;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS labor_fixed_amount_cents INTEGER;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS labor_estimated_hours NUMERIC(7,2);
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS labor_estimated_amount_cents INTEGER;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS labor_estimated_materials_cents INTEGER;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS labor_estimated_materials_items JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS labor_estimated_other_items JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS labor_estimated_other_amount_cents INTEGER;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS labor_estimated_contractor_hours JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE contracts ALTER COLUMN billing_cycle DROP NOT NULL;
 ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_package_type_check;
 ALTER TABLE contracts ADD CONSTRAINT contracts_package_type_check
   CHECK (package_type IS NULL OR package_type IN ('single_home', 'portfolio', 'custom'));
+ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_contract_type_check;
+ALTER TABLE contracts ADD CONSTRAINT contracts_contract_type_check
+  CHECK (contract_type IN ('maintenance', 'labor'));
+ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_labor_pricing_model_check;
+ALTER TABLE contracts ADD CONSTRAINT contracts_labor_pricing_model_check
+  CHECK (labor_pricing_model IS NULL OR labor_pricing_model IN ('fixed', 'hourly_estimate'));
+ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_labor_fixed_amount_check;
+ALTER TABLE contracts ADD CONSTRAINT contracts_labor_fixed_amount_check
+  CHECK (labor_fixed_amount_cents IS NULL OR labor_fixed_amount_cents > 0);
+ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_labor_estimated_hours_check;
+ALTER TABLE contracts ADD CONSTRAINT contracts_labor_estimated_hours_check
+  CHECK (labor_estimated_hours IS NULL OR labor_estimated_hours > 0);
+ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_labor_estimated_materials_check;
+ALTER TABLE contracts ADD CONSTRAINT contracts_labor_estimated_materials_check
+  CHECK (labor_estimated_materials_cents IS NULL OR labor_estimated_materials_cents >= 0);
+ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_labor_estimated_other_amount_check;
+ALTER TABLE contracts ADD CONSTRAINT contracts_labor_estimated_other_amount_check
+  CHECK (labor_estimated_other_amount_cents IS NULL OR labor_estimated_other_amount_cents >= 0);
 
 CREATE INDEX IF NOT EXISTS idx_contracts_account_id ON contracts (account_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts (status);

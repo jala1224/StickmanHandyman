@@ -1,0 +1,70 @@
+.portal-checkout-modal {
+    position: fixed;
+    inset: var(--checkout-top, 0px) 0 auto;
+    width: min(760px, calc(100vw - 24px));
+    max-width: none;
+    max-height: calc(var(--checkout-height, 100dvh) - 24px);
+    margin: 12px auto;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: #fff;
+    color: #222;
+    box-shadow: 0 16px 56px rgba(0, 0, 0, 0.24);
+    overflow: hidden;
+}
+
+.portal-checkout-modal[open] {
+    display: flex;
+    flex-direction: column;
+}
+
+.portal-checkout-modal::backdrop {
+    background: rgba(0, 0, 0, 0.48);
+}
+
+.portal-checkout-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    flex: none;
+}
+
+.portal-checkout-header h2 {
+    margin: 0;
+    font: inherit;
+    font-size: 19px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.portal-checkout-close {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 28px;
+    cursor: pointer;
+    flex: none;
+}
+
+.portal-checkout-close:focus-visible {
+    outline: 2px solid #16733e;
+    outline-offset: -4px;
+}
+
+.portal-checkout-body {
+    padding: 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 0;
+}
+
+#portal-checkout-status:empty {
+    display: none;
+}

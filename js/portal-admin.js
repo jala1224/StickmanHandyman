@@ -1,6 +1,7 @@
     const portal = window.StickmanPortal;
     portal.initTopnav();
     portal.populateStateSelects();
+    initAdminInputViewport();
 
     let adminToken = portal.readAdminToken();
     let apiBase = portal.readApiBase();
@@ -21,8 +22,12 @@
     let contractFilterClientId = '';
     let contractFilterStatus = '';
     let contractSortValue = 'startDate-desc';
+    let laborContractFilterClientId = '';
+    let laborContractFilterStatus = '';
+    let laborContractSortValue = 'startDate-desc';
 
     const $ = (id) => document.getElementById(id);
+    const bindIfPresent = (id, eventName, handler) => $(id)?.addEventListener(eventName, handler);
 
     if (window.pdfjsLib) {
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -32,12 +37,25 @@
     const pdfModalCanvas = $('portal-pdf-modal-canvas');
     const pdfModalClose = $('portal-pdf-modal-close');
     const pdfModalDownload = $('portal-pdf-modal-download');
+    const pdfModalPages = $('portal-pdf-modal-pages');
+    const pdfModalPrevious = $('portal-pdf-modal-previous');
+    const pdfModalNext = $('portal-pdf-modal-next');
+    const pdfModalPageLabel = $('portal-pdf-modal-page-label');
     let pdfRenderTask = null;
     let viewedInvoiceId = null;
     let viewedInvoiceDocument = null;
+    let viewedPdfPageNumber = 1;
+    let viewedPdfPageCount = 0;
     let invoicePrintNumber = '';
+    let pdfDownloadFileName = '';
 
     pdfModalClose.addEventListener('click', closePdfModal);
+    pdfModalPrevious.addEventListener('click', () => {
+        void renderPdfViewerPage(viewedPdfPageNumber - 1);
+    });
+    pdfModalNext.addEventListener('click', () => {
+        void renderPdfViewerPage(viewedPdfPageNumber + 1);
+    });
     pdfModalDownload.addEventListener('click', async () => {
         if (!viewedInvoiceId || !viewedInvoiceDocument) {
             return;
@@ -49,7 +67,7 @@
             const downloadUrl = URL.createObjectURL(new Blob([pdfData], { type: 'application/pdf' }));
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.download = invoicePdfDownloadName(invoicePrintNumber);
+            link.download = pdfDownloadFileName || invoicePdfDownloadName(invoicePrintNumber);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -71,10 +89,25 @@
         window.location.replace('portal-login.html?reason=admin-session-required');
     }
 
+    document.addEventListener('click', (event) => {
+        const closeButton = event.target.closest?.('[data-close-modal]');
+        if (closeButton) {
+            closeModal(closeButton.dataset.closeModal);
+            return;
+        }
+        if (event.target.closest?.('#contract-documents-close')) {
+            closeModal('modal-contract-attachments');
+            return;
+        }
+    });
+    document.addEventListener('click', handleAdminActionClick);
+
     $('admin-refresh-btn').addEventListener('click', () => {
         apiBase = portal.readApiBase();
         loadAll();
     });
+
+    void loadAll();
 
     $('admin-logout-btn').addEventListener('click', () => {
         portal.clearAdminSession();
@@ -98,7 +131,7 @@
         document.querySelectorAll('.admin-tab-btn').forEach((button) => {
             button.classList.toggle('active', button.dataset.tab === tab);
         });
-        ['clients', 'invoices', 'contracts', 'contractors'].forEach((name) => {
+        ['clients', 'invoices', 'contracts', 'labor-contracts', 'contractors'].forEach((name) => {
             $(`admin-tab-panel-${name}`).hidden = name !== tab;
         });
 
@@ -135,6 +168,21 @@
         renderContractsTable();
     });
 
+    $('labor-contract-filter-client-select').addEventListener('change', () => {
+        laborContractFilterClientId = $('labor-contract-filter-client-select').value;
+        renderLaborContractsTable();
+    });
+
+    $('labor-contract-filter-status-select').addEventListener('change', () => {
+        laborContractFilterStatus = $('labor-contract-filter-status-select').value;
+        renderLaborContractsTable();
+    });
+
+    $('labor-contract-sort-select').addEventListener('change', () => {
+        laborContractSortValue = $('labor-contract-sort-select').value;
+        renderLaborContractsTable();
+    });
+
     $('contractor-tax-year').addEventListener('change', renderContractors);
     $('contractor-tax-period').addEventListener('change', () => {
         updateContractorTaxPeriodVisibility();
@@ -147,11 +195,25 @@
         editingClientId = null;
         $('form-new-client').reset();
         resetClientServiceAddressRows();
+        resetClientBusinesses();
+        populateClientMergeSourceSelect();
         $('client-modal-title').textContent = 'New Client';
         $('client-submit-button').textContent = 'Create Client';
         openModal('modal-new-client');
     });
     $('add-client-service-address-btn').addEventListener('click', () => addClientServiceAddressRow());
+    bindIfPresent('add-client-business-btn', 'click', () => addClientBusinessRow());
+    bindIfPresent('show-client-merge-button', 'click', () => {
+        const section = $('client-merge-section');
+        section.hidden = !section.hidden;
+        $('show-client-merge-button').setAttribute('aria-expanded', String(!section.hidden));
+        if (!section.hidden) $('client-merge-source-select').focus();
+    });
+    bindIfPresent('client-merge-source-select', 'change', () => {
+        const mergeButton = $('merge-client-button');
+        if (mergeButton) mergeButton.disabled = !$('client-merge-source-select').value;
+    });
+    bindIfPresent('merge-client-button', 'click', () => void mergeClientRecord());
     $('new-invoice-btn').addEventListener('click', () => {
         editingInvoiceId = null;
         $('form-new-invoice').reset();
@@ -166,17 +228,27 @@
         $('invoice-submit-button').textContent = 'Create Invoice';
         openModal('modal-new-invoice');
     });
-    $('new-contract-btn').addEventListener('click', () => {
-        editingContractId = null;
-        $('form-new-contract').reset();
-        $('contract-package-level').required = false;
-        $('contract-package-level-wrapper').classList.add('hidden');
-        $('contract-custom-package-fields').classList.add('hidden');
-        $('form-new-contract').elements.namedItem('packageMonthlyCost').required = false;
-        $('form-new-contract').elements.namedItem('packageRetainerHours').required = false;
-        $('contract-modal-title').textContent = 'New Contract';
-        $('contract-submit-button').textContent = 'Create Contract';
-        openModal('modal-new-contract');
+    bindIfPresent('invoice-billing-business-select', 'change', () => {
+        const clientId = $('invoice-client-select').value;
+        const client = allClients.find((entry) => entry.id === clientId);
+        const business = client?.businesses?.find((entry) => entry.id === $('invoice-billing-business-select').value);
+        const preferredAddress = business?.address || client?.address;
+        if (preferredAddress && Array.from($('invoice-service-address-select').options).some((option) => option.value === preferredAddress)) {
+            $('invoice-service-address-select').value = preferredAddress;
+        }
+        updateInvoiceContractOptions(clientId);
+    });
+    $('new-contract-btn').addEventListener('click', () => openNewContractForm('maintenance'));
+    $('new-labor-contract-btn').addEventListener('click', () => openNewContractForm('labor'));
+    $('choose-contract-attachment-btn').addEventListener('click', () => $('contract-attachment-file').click());
+    $('contract-attachment-file').addEventListener('change', () => {
+        const file = $('contract-attachment-file').files?.[0];
+        if (file && activeAttachmentContractId) void uploadContractAttachment();
+    });
+    $('contract-type').addEventListener('change', updateContractFormType);
+    $('labor-pricing-model').addEventListener('change', updateLaborPricingFields);
+    $('contract-client-select').addEventListener('change', () => {
+        populateContractServiceAddressSelect($('contract-client-select').value);
     });
     $('contract-package-type').addEventListener('change', () => {
         const packageType = $('contract-package-type').value;
@@ -185,6 +257,7 @@
         $('contract-package-level-wrapper').classList.toggle('hidden', !hasStandardPackage);
         $('contract-package-level').required = hasStandardPackage;
         $('contract-custom-package-fields').classList.toggle('hidden', !isCustom);
+        $('contract-package-coverage-type').required = isCustom;
         $('form-new-contract').elements.namedItem('packageMonthlyCost').required = isCustom;
         $('form-new-contract').elements.namedItem('packageRetainerHours').required = isCustom;
         if (isCustom) {
@@ -194,6 +267,9 @@
         }
     });
     $('new-contractor-btn').addEventListener('click', () => openNewContractorForm());
+    $('add-labor-estimate-row-btn').addEventListener('click', () => addLaborEstimateRow());
+    $('add-labor-estimate-material-btn').addEventListener('click', () => addLaborEstimateMaterialItem());
+    $('add-labor-estimate-other-btn').addEventListener('click', () => addLaborEstimateOtherItem());
     $('add-materials-row-btn').addEventListener('click', () => addInvoiceItemRow({ type: 'material', description: 'Materials', quantity: 1, unitPriceCents: 0 }));
     $('add-other-row-btn').addEventListener('click', () => addInvoiceItemRow({ type: 'package', description: '', quantity: 1, unitPriceCents: 0 }));
 
@@ -206,12 +282,9 @@
             if (!Number.isFinite(Number(target.value))) {
                 target.value = '0';
             }
+            target.dataset.manualOverride = 'true';
             updateInvoiceTotals();
         }
-    });
-
-    document.querySelectorAll('[data-close-modal]').forEach((button) => {
-        button.addEventListener('click', () => closeModal(button.dataset.closeModal));
     });
 
     document.querySelectorAll('.admin-modal-backdrop').forEach((backdrop) => {
@@ -220,6 +293,12 @@
                 closeModal(backdrop.id);
             }
         });
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        const openBackdrop = document.querySelector('.admin-modal-backdrop:not(.hidden)');
+        if (openBackdrop) closeModal(openBackdrop.id);
     });
 
     $('form-new-client').addEventListener('submit', async (event) => {
@@ -236,6 +315,7 @@
                     name: String(data.get('name') || '').trim(),
                     address: billingAddress,
                     serviceAddresses,
+                    businesses: getClientBusinesses(),
                 }),
             });
             const payload = await response.json();
@@ -288,6 +368,10 @@
 
     $('form-new-invoice').addEventListener('submit', async (event) => {
         event.preventDefault();
+        if (!isInvoiceContractPricingReady()) {
+            setMsg('msg-new-invoice', 'Wait for contract pricing to finish before saving this invoice.', true);
+            return;
+        }
         const data = new FormData($('form-new-invoice'));
         const lineItems = getInvoiceItemRows();
         const contractorHours = getContractorHoursRows();
@@ -317,6 +401,7 @@
                 method: editingInvoiceId ? 'PATCH' : 'POST',
                 body: JSON.stringify({
                     accountId: selectedClientId,
+                    billingBusinessId: $('invoice-billing-business-select')?.value || null,
                     issueDate: String(data.get('issueDate') || '') || getTodayLocalDate(),
                     jobName,
                     isOngoing,
@@ -325,6 +410,7 @@
                     amountCents: finalTotalCents,
                     discountCents,
                     serviceAddress: selectedServiceAddress,
+                    contractId: String($('invoice-contract-select').value || '') || undefined,
                     lineItems: invoiceItems.map((item) => ({
                         type: item.type,
                         description: String(item.description || '').trim(),
@@ -362,28 +448,42 @@
         event.preventDefault();
         const data = new FormData($('form-new-contract'));
         const contractId = editingContractId;
+        const contractType = String(data.get('contractType') || 'maintenance');
         const packageType = String(data.get('packageType') || '');
-        const isCustomPackage = packageType === 'custom';
+        const isMaintenance = contractType === 'maintenance';
+        const isCustomPackage = isMaintenance && packageType === 'custom';
         try {
             const response = await apiFetch(contractId ? `/api/contracts/${encodeURIComponent(contractId)}` : '/api/contracts', {
                 method: contractId ? 'PATCH' : 'POST',
                 body: JSON.stringify({
+                    contractType,
                     clientId: String(data.get('clientId') || ''),
-                    billingCycle: String(data.get('billingCycle') || 'monthly'),
+                    serviceAddress: String(data.get('serviceAddress') || ''),
+                    billingCycle: isMaintenance ? String(data.get('billingCycle') || 'monthly') : undefined,
                     startDate: String(data.get('startDate') || '') || undefined,
-                    packageType: packageType || undefined,
-                    packageLevel: isCustomPackage ? null : String(data.get('packageLevel') || '') || undefined,
+                    title: isMaintenance ? undefined : String(data.get('title') || '').trim(),
+                    scope: isMaintenance ? undefined : String(data.get('scope') || '').trim(),
+                    packageType: isMaintenance ? packageType || undefined : undefined,
+                    packageCoverageType: isCustomPackage ? String(data.get('packageCoverageType') || 'single_home') : undefined,
+                    packageLevel: !isMaintenance ? undefined : isCustomPackage ? null : String(data.get('packageLevel') || '') || undefined,
                     packageMonthlyCostCents: isCustomPackage
                         ? Math.round(Number(data.get('packageMonthlyCost') || 0) * 100)
                         : undefined,
-                    packageRetainerHours: isCustomPackage
-                        ? Number(data.get('packageRetainerHours') || 0)
+                    packageRetainerHours: isCustomPackage ? Number(data.get('packageRetainerHours') || 0) : undefined,
+                    packageRolloverHours: isCustomPackage ? Number(data.get('packageRolloverHours') || 0) : undefined,
+                    packageDiscountPercent: isCustomPackage ? Number(data.get('packageDiscountPercent') || 0) : undefined,
+                    laborPricingModel: isMaintenance ? undefined : String(data.get('laborPricingModel') || ''),
+                    laborFixedAmountCents: !isMaintenance && data.get('laborPricingModel') === 'fixed'
+                        ? Math.round(Number(data.get('laborFixedAmount') || 0) * 100)
                         : undefined,
-                    packageRolloverHours: isCustomPackage
-                        ? Number(data.get('packageRolloverHours') || 0)
+                    laborEstimatedContractorHours: !isMaintenance && data.get('laborPricingModel') === 'hourly_estimate'
+                        ? getLaborEstimateRows()
                         : undefined,
-                    packageDiscountPercent: isCustomPackage
-                        ? Number(data.get('packageDiscountPercent') || 0)
+                    laborEstimatedMaterialsItems: !isMaintenance && data.get('laborPricingModel') === 'hourly_estimate'
+                        ? getLaborEstimateMaterialsItems()
+                        : undefined,
+                    laborEstimatedOtherItems: !isMaintenance && data.get('laborPricingModel') === 'hourly_estimate'
+                        ? getLaborEstimateOtherItems()
                         : undefined,
                     packagePriorityScheduling: isCustomPackage && data.get('packagePriorityScheduling') === 'on',
                     packageAnnualInspection: isCustomPackage && data.get('packageAnnualInspection') === 'on',
@@ -431,8 +531,6 @@
             setMsg('msg-contractor', error.message, true);
         }
     });
-
-    loadAll();
 
     async function loadAll() {
         adminToken = portal.readAdminToken();
@@ -593,10 +691,16 @@
         `;
     }
 
-    document.addEventListener('click', (event) => {
+    function handleAdminActionClick(event) {
         const viewInvoiceButton = event.target.closest('[data-view-invoice]');
         if (viewInvoiceButton) {
             openPdfModal(viewInvoiceButton.dataset.viewInvoice);
+            return;
+        }
+
+        const viewContractButton = event.target.closest('[data-view-contract]');
+        if (viewContractButton) {
+            openPdfModal(viewContractButton.dataset.viewContract, 'contract');
             return;
         }
 
@@ -664,6 +768,12 @@
             return;
         }
 
+        const contractManualPaymentButton = event.target.closest('[data-contract-manual-payment]');
+        if (contractManualPaymentButton) {
+            void updateContractManualPayment(contractManualPaymentButton);
+            return;
+        }
+
         const editContractorButton = event.target.closest('[data-edit-contractor]');
         if (editContractorButton) {
             openContractorEditor(editContractorButton.dataset.editContractor);
@@ -676,7 +786,7 @@
         }
 
         updateStatus(button.dataset.entity, button.dataset.id, button.dataset.status);
-    });
+    }
 
     function apiFetch(path, options = {}) {
         return fetch(`${apiBase}${path}`, {
@@ -687,6 +797,25 @@
                 ...(options.headers || {}),
             },
         });
+    }
+
+    async function updateContractManualPayment(button) {
+        const contractId = button.dataset.contractManualPayment;
+        const action = button.dataset.paymentAction;
+        const endpoint = action === 'undo' ? 'undo-manual-payment' : 'record-payment';
+        button.disabled = true;
+        try {
+            const response = await apiFetch(`/api/contracts/${encodeURIComponent(contractId)}/${endpoint}`, { method: 'POST' });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.error || 'Unable to update the contract payment.');
+            await loadAll();
+            setPageMessage(action === 'undo'
+                ? 'Manual contract payment marked unpaid.'
+                : `Manual payment of ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(payload.contract.lastPaymentAmountCents || 0) / 100)} recorded. Next due: ${payload.contract.nextPaymentDueAt || 'not scheduled'}.`, false);
+        } catch (error) {
+            setPageMessage(error.message || 'Unable to update the contract payment.', true);
+            button.disabled = false;
+        }
     }
 
     function populateClientSelects(clients) {
@@ -702,7 +831,7 @@
     }
 
     function populateFilterClientSelects(clients) {
-        ['invoice-filter-client-select', 'contract-filter-client-select'].forEach((selectId) => {
+        ['invoice-filter-client-select', 'contract-filter-client-select', 'labor-contract-filter-client-select'].forEach((selectId) => {
             const select = $(selectId);
             const previousValue = select.value;
             select.innerHTML = '<option value="">All Clients</option>'
@@ -733,6 +862,15 @@
         populateInvoiceServiceAddressSelect($('invoice-client-select').value || '');
     });
 
+    $('invoice-service-address-select').addEventListener('change', () => {
+        updateInvoiceContractOptions($('invoice-client-select').value || '');
+    });
+
+    $('invoice-contract-select').addEventListener('change', updateInvoiceTotals);
+    $('invoice-issue-date').addEventListener('change', () => {
+        updateInvoiceContractOptions($('invoice-client-select').value || '', $('invoice-contract-select').value);
+    });
+
     $('invoice-is-ongoing').addEventListener('change', () => {
         const isOngoing = $('invoice-is-ongoing').checked;
         $('invoice-job-name-wrapper').classList.toggle('hidden', !isOngoing);
@@ -740,6 +878,7 @@
             $('invoice-job-name').value = '';
         }
         $('invoice-submit-button').textContent = isOngoing ? 'Save Ongoing Job' : 'Create Invoice';
+        updateInvoiceTotals();
     });
 
     $('invoice-contractor-actions').addEventListener('click', (event) => {
@@ -791,6 +930,64 @@
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    }
+
+    function initAdminInputViewport() {
+        const viewport = window.visualViewport;
+        if (!viewport || (navigator.maxTouchPoints === 0 && !window.matchMedia('(pointer: coarse)').matches)) {
+            return;
+        }
+
+        const textInputTypes = new Set(['text', 'search', 'email', 'tel', 'url', 'password', 'number']);
+        let pendingFrame = 0;
+
+        function syncViewport() {
+            pendingFrame = 0;
+            document.documentElement.style.setProperty('--admin-viewport-height', `${viewport.height}px`);
+            document.documentElement.style.setProperty('--admin-viewport-top', `${viewport.offsetTop}px`);
+
+            const field = document.activeElement;
+            const isEditable = (field instanceof HTMLInputElement && textInputTypes.has(field.type))
+                || field instanceof HTMLTextAreaElement
+                || (field instanceof HTMLElement && field.isContentEditable);
+            if (!isEditable || field.disabled || field.readOnly || !field.getClientRects().length) {
+                return;
+            }
+
+            const modal = field.closest('.admin-modal');
+            const modalBounds = modal?.getBoundingClientRect();
+            const top = Math.max(viewport.offsetTop, modalBounds?.top ?? viewport.offsetTop) + 20;
+            let bottom = Math.min(viewport.offsetTop + viewport.height, modalBounds?.bottom ?? Infinity) - 20;
+            const actions = modal?.querySelector('.admin-modal-actions');
+            if (actions && !actions.contains(field) && getComputedStyle(actions).position === 'sticky') {
+                bottom = Math.min(bottom, actions.getBoundingClientRect().top - 12);
+            }
+            if (bottom <= top) {
+                return;
+            }
+
+            const bounds = field.getBoundingClientRect();
+            const scrollDistance = bounds.height > bottom - top || bounds.top < top
+                ? bounds.top - top
+                : Math.max(0, bounds.bottom - bottom);
+            if (modal) {
+                modal.scrollTop += scrollDistance;
+            } else if (scrollDistance) {
+                window.scrollBy({ top: scrollDistance, behavior: 'instant' });
+            }
+        }
+
+        function scheduleViewportSync() {
+            if (!pendingFrame) {
+                pendingFrame = requestAnimationFrame(syncViewport);
+            }
+        }
+
+        viewport.addEventListener('resize', scheduleViewportSync, { passive: true });
+        viewport.addEventListener('scroll', scheduleViewportSync, { passive: true });
+        document.addEventListener('focusin', scheduleViewportSync);
+        document.addEventListener('focusout', scheduleViewportSync);
+        scheduleViewportSync();
     }
 
     function openModal(id) {

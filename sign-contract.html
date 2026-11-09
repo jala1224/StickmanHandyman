@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Review and Sign | Stickman Handyman</title>
+    <link rel="stylesheet" href="styles.css?v=20261007">
+    <link rel="stylesheet" href="css/navigation.css?v=20261019">
+    <link rel="stylesheet" href="css/sign-contract.css?v=20261108d">
+</head>
+<body class="signing-page">
+    <div id="nav-placeholder"></div>
+    <main class="signing-main">
+        <section class="signing-intro">
+            <p class="signing-eyebrow">Contract signature</p>
+            <h1>Review and sign</h1>
+            <p id="signing-status" class="signing-status" aria-live="polite">Opening your secure signing link...</p>
+        </section>
+
+        <form id="signer-email-form" class="signing-email-form" hidden>
+            <label for="signer-email">Invited email address</label>
+            <div class="signing-email-row">
+                <input id="signer-email" name="signerEmail" type="email" autocomplete="email" maxlength="254" required>
+                <button id="load-document-button" type="submit">Open document</button>
+            </div>
+        </form>
+
+        <section id="signing-content" class="signing-content" hidden>
+            <div class="signing-document-column">
+                <div class="signing-document-heading">
+                    <div>
+                        <h2 id="document-contract-title">Contract</h2>
+                        <p id="document-file-name"></p>
+                    </div>
+                    <span id="document-expires" class="signing-expiry"></span>
+                </div>
+                <iframe id="document-preview" title="Contract PDF preview" allowfullscreen></iframe>
+                <button id="retry-signed-document" type="button" class="button-secondary signed-document-retry" hidden>Retry Loading PDF</button>
+            </div>
+
+            <form id="signature-form" class="signature-form">
+                <h2>Signer details</h2>
+                <p id="signer-summary" class="signer-summary"></p>
+                <label for="signer-name">Full name</label>
+                <input id="signer-name" name="signerName" type="text" autocomplete="name" maxlength="120" required>
+
+                <fieldset class="signature-choice">
+                    <legend>Signature type</legend>
+                    <label><input type="radio" name="signatureType" value="typed" checked> Type</label>
+                    <label><input type="radio" name="signatureType" value="drawn"> Draw</label>
+                </fieldset>
+
+                <div id="typed-signature-panel" class="signature-input-panel">
+                    <label for="signature-text">Type your full name</label>
+                    <input id="signature-text" type="text" autocomplete="off" maxlength="120" required>
+                </div>
+                <div id="drawn-signature-panel" class="signature-input-panel" hidden>
+                    <label for="signature-canvas">Draw your signature</label>
+                    <canvas id="signature-canvas" aria-label="Draw your signature" tabindex="0"></canvas>
+                    <button id="clear-signature-button" class="button-secondary" type="button">Clear signature</button>
+                </div>
+
+                <label class="signing-consent">
+                    <input id="signature-consent" type="checkbox" required>
+                    <span>I have reviewed this document and agree to sign it electronically. I intend my electronic signature to have the same effect as my handwritten signature.</span>
+                </label>
+                <button id="submit-signature-button" class="signature-submit" type="submit">Sign document</button>
+                <p class="signing-legal-note">By signing, you agree to the terms of this agreement. A record of your electronic consent is retained.</p>
+            </form>
+        </section>
+    </main>
+    <div id="footer-placeholder"></div>
+    <script src="portal-shared.js" defer></script>
+    <script src="load-components.js" defer></script>
+    <script src="js/sign-contract.js?v=20261109a" defer></script>
+</body>
+</html>

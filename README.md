@@ -49,10 +49,26 @@ Install dependencies with `npm --prefix backend ci`, then run `npm run dev` at t
 - Local admin password: `local-dev-only` (development only, never a production credential)
 - Local test records: `.local/data/`; generated PDFs: `.local/invoices/`. Both are ignored by Git and excluded from frontend deployments.
 - First run seeds an $80/hour owner, a $50/hour sample contractor, and the API's sample client. Subsequent runs keep your local test changes.
-- Stripe and email credentials are explicitly disabled by the launcher. It runs the API from `.local/` rather than loading `backend/.env`.
+- Stripe and email credentials are explicitly disabled by `npm run dev`. It runs the API from `.local/` rather than loading `backend/.env`. Stripe test mode requires the separate opt-in command below; email stays disabled.
 - Both services bind to localhost. Ctrl+C stops both services.
 
 Use `npm run dev -- --port=8127 --api-port=3001` to choose free frontend/API ports. The frontend proxies `/api/` and `/health` to that local backend. `npm run dev:frontend` starts only the frontend when you want to run the backend separately (`API_PORT` selects its proxy port). These servers are for development, not production.
+
+### Local Stripe Test Mode
+
+Keep test credentials in `.local/stripe.env`, which is ignored by Git, excluded from frontend deployment, and not served by the local web server:
+
+```dotenv
+STRIPE_SECRET_KEY=sk_test_REPLACE_LOCALLY
+STRIPE_PUBLISHABLE_KEY=pk_test_REPLACE_LOCALLY
+STRIPE_WEBHOOK_SECRET=
+```
+
+Stop the existing dev server, then run `npm run dev:stripe`. It uses the same isolated `.local/` records and localhost-only servers. It rejects live-mode keys and refuses to enable test mode when `NODE_ENV=production`. Only the three Stripe variables above are loaded; the credential file cannot change data directories, bind addresses, or other server settings. Test keys must belong to the same Stripe sandbox/account. Never put secrets in frontend files or commit them; rotate any secret shared in chat or logs. Rotating a key also requires replacing it in the ignored local file and restarting the server.
+
+For payment confirmations, run `stripe login` locally and then `stripe listen --forward-to http://127.0.0.1:3000/api/stripe/webhook` in another terminal. Enter the signing secret displayed by Stripe CLI directly into `STRIPE_WEBHOOK_SECRET` in the local file, then restart `npm run dev:stripe`. Do not paste credentials into chat. Missing webhook configuration does not prevent checkout from opening, but automatic payment confirmation will not work until configured. Use `-- --port=8127 --api-port=3001` to choose alternate ports and update the CLI forwarding port to match.
+
+Normal backend startup and production deployments do not load this file. `npm run dev` still blanks Stripe credentials, even when the file exists or the shell has Stripe keys set.
 
 ### Automatic API Selection
 

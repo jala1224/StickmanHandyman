@@ -232,7 +232,7 @@
             const cancelAutopay = paymentType === 'contract-cancel-autopay';
             button.disabled = true;
             if (paymentMessage) {
-                paymentMessage.textContent = cancelAutopay ? 'Canceling autopay...' : 'Redirecting to Stripe checkout...';
+                paymentMessage.textContent = cancelAutopay ? 'Canceling autopay...' : 'Opening secure checkout...';
                 paymentMessage.className = 'portal-inline-message';
             }
 
@@ -243,7 +243,7 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`,
                     },
-                    ...(!cancelAutopay ? { body: JSON.stringify({ autopay: button.dataset.contractAutopay === 'true' }) } : {}),
+                    ...(!cancelAutopay ? { body: JSON.stringify({ autopay: button.dataset.contractAutopay === 'true', uiMode: 'embedded' }) } : {}),
                 });
                 const payload = await response.json();
                 if (!response.ok) {
@@ -252,10 +252,8 @@
 
                 if (cancelAutopay) {
                     await loadClientPortal();
-                } else if (payload.checkoutUrl) {
-                    window.location.href = payload.checkoutUrl;
                 } else {
-                    throw new Error('Stripe did not return a checkout link.');
+                    await window.StickmanPayments.open({ title: button.dataset.contractAutopay === 'true' ? 'Enable autopay' : 'Contract payment', session: payload, onComplete: loadClientPortal });
                 }
             } catch (error) {
                 button.disabled = false;
@@ -263,6 +261,9 @@
                     paymentMessage.textContent = error.message || 'Unable to update contract payment.';
                     paymentMessage.className = 'portal-inline-message portal-inline-message-error';
                 }
+            } finally {
+                button.disabled = false;
+                if (paymentMessage && !paymentMessage.classList.contains('portal-inline-message-error')) paymentMessage.textContent = '';
             }
             return;
         }
@@ -277,7 +278,7 @@
 
         button.disabled = true;
         if (paymentMessage) {
-            paymentMessage.textContent = 'Redirecting to Stripe checkout...';
+            paymentMessage.textContent = 'Opening secure checkout...';
             paymentMessage.className = 'portal-inline-message';
         }
 
@@ -285,19 +286,22 @@
             const response = await fetch(`${apiBase}/api/invoices/${encodeURIComponent(paymentId)}/checkout-session`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lookupAccessToken, returnPath: 'portal-client.html' }),
+                body: JSON.stringify({ lookupAccessToken, returnPath: 'portal-client.html', uiMode: 'embedded' }),
             });
             const payload = await response.json();
-            if (!response.ok || !payload.checkoutUrl) {
+            if (!response.ok) {
                 throw new Error(payload.error || 'Unable to start checkout right now.');
             }
-            window.location.href = payload.checkoutUrl;
+            await window.StickmanPayments.open({ title: 'Invoice payment', session: payload, onComplete: loadClientPortal });
         } catch (error) {
             button.disabled = false;
             if (paymentMessage) {
                 paymentMessage.textContent = error.message || 'Unable to start checkout right now.';
                 paymentMessage.className = 'portal-inline-message portal-inline-message-error';
             }
+        } finally {
+            button.disabled = false;
+            if (paymentMessage && !paymentMessage.classList.contains('portal-inline-message-error')) paymentMessage.textContent = '';
         }
     });
 
@@ -453,6 +457,9 @@
                 const issueDate = issueDateValue
                     ? new Date(`${issueDateValue}T12:00:00`).toLocaleDateString('en-US')
                     : 'Date unavailable';
+                const billToLabel = invoice.billingBusinessId && invoice.billingEntityName
+                    ? `Bill to: ${invoice.billingEntityName} | `
+                    : '';
                 const actionId = `portal-payment-action-${invoice.id}`;
                 const apiBase = portal.readApiBase();
                 const lookupAccessToken = portal.readLookupAccessToken();
@@ -461,7 +468,7 @@
                 return `
                     <li class="portal-activity-item">
                         <strong>${portal.escapeHtml(invoice.invoiceNumber || 'Invoice')}</strong>
-                        <p class="portal-activity-meta">Status: ${portal.escapeHtml(invoice.status || 'unknown')} | ${portal.escapeHtml(amount)} | Issued: ${portal.escapeHtml(issueDate)}</p>
+                        <p class="portal-activity-meta">${portal.escapeHtml(billToLabel)}Status: ${portal.escapeHtml(invoice.status || 'unknown')} | ${portal.escapeHtml(amount)} | Issued: ${portal.escapeHtml(issueDate)}</p>
                         <div class="portal-inline-actions">
                             <button type="button" class="portal-button portal-button-secondary" data-view-invoice="${viewUrl}">View</button>
                             <a class="portal-button portal-button-secondary" href="${downloadUrl}" target="_blank" rel="noopener">Download</a>
@@ -481,24 +488,39 @@
         contractsList.innerHTML = activeContracts.map((contract) => {
             const autopayEnabled = Boolean(contract.autopayEnabled);
             const billingAmountCents = Number(contract.billingAmountCents || 0);
+            const maintenanceSummary = contract.maintenanceSummary || {};
+            const retainerBalance = `${Number(maintenanceSummary.remainingHours ?? 0)} hours remaining`;
             const billingCycle = contract.billingCycle === 'quarterly' ? 'quarter'
                 : contract.billingCycle === 'annually' ? 'year'
                     : 'month';
-            const packageLabel = contract.packageType === 'custom'
+            const isLaborContract = contract.contractType === 'labor';
+            const packageLabel = isLaborContract
+                ? (contract.title || 'Labor contract')
+                : contract.packageType === 'custom'
                 ? 'Custom package'
                 : `${contract.packageType === 'portfolio' ? 'Portfolio' : 'Single Home'} ${contract.packageLevel ? `${contract.packageLevel.charAt(0).toUpperCase()}${contract.packageLevel.slice(1)}` : ''}`.trim();
+            const laborSummary = contract.laborSummary || {};
+            const laborEstimatedTotalCents = Number(laborSummary.estimatedTotalAmountCents
+                ?? (Number(contract.laborEstimatedAmountCents || 0) + Number(contract.laborEstimatedMaterialsCents || 0) + Number(contract.laborEstimatedOtherAmountCents || 0)));
+            const laborPricing = contract.laborPricingModel === 'fixed'
+                ? `Quoted price · $${(Number(contract.laborFixedAmountCents || 0) / 100).toFixed(2)}`
+                : `Hourly estimate · ${Number(contract.laborEstimatedHours || 0).toFixed(2)} hours · Labor $${(Number(contract.laborEstimatedAmountCents || 0) / 100).toFixed(2)} + materials $${(Number(contract.laborEstimatedMaterialsCents || 0) / 100).toFixed(2)} + other $${(Number(contract.laborEstimatedOtherAmountCents || 0) / 100).toFixed(2)} · $${(laborEstimatedTotalCents / 100).toFixed(2)} total estimate`;
+            const laborProgress = contract.laborPricingModel === 'fixed'
+                ? `$${(Number(laborSummary.invoicedAmountCents || 0) / 100).toFixed(2)} invoiced · $${(Number(laborSummary.remainingAmountCents || 0) / 100).toFixed(2)} remaining`
+                : `${Number(laborSummary.actualHours || 0).toFixed(2)} of ${Number(laborSummary.estimatedHours ?? contract.laborEstimatedHours ?? 0).toFixed(2)} hours tracked · $${(Number(laborSummary.invoicedAmountCents || 0) / 100).toFixed(2)} invoiced`;
             const actionId = `portal-payment-action-${contract.id}`;
             return `
                 <li class="portal-activity-item">
                     <strong>${portal.escapeHtml(contract.contractNumber || 'Contract')}</strong>
-                    <p class="portal-activity-meta">${portal.escapeHtml(packageLabel)} | Status: ${portal.escapeHtml(contract.status || 'unknown')} | Start: ${portal.escapeHtml(contract.startDate || 'No start date')} | ${billingAmountCents > 0 ? `$${(billingAmountCents / 100).toFixed(2)} per ${billingCycle}` : 'Price unavailable'}</p>
-                    <div class="portal-inline-actions">
+                    <p class="portal-activity-meta">${portal.escapeHtml(packageLabel)} | Status: ${portal.escapeHtml(contract.status || 'unknown')} | Start: ${portal.escapeHtml(contract.startDate || 'No start date')} | ${isLaborContract ? `${portal.escapeHtml(laborPricing)} · ${portal.escapeHtml(laborProgress)}` : `${billingAmountCents > 0 ? `$${(billingAmountCents / 100).toFixed(2)} per ${billingCycle}` : 'Price unavailable'} · ${retainerBalance}`}</p>
+                    ${isLaborContract ? `<p class="portal-activity-meta">Service address: ${portal.escapeHtml(contract.serviceAddress || '—')}<br>Scope: ${portal.escapeHtml(contract.scope || '—')}</p>` : ''}
+                    ${!isLaborContract ? `<div class="portal-inline-actions">
                         ${billingAmountCents > 0 ? `<button type="button" class="portal-button portal-button-secondary" data-payment-action="contract" data-payment-id="${portal.escapeHtml(contract.id)}" data-contract-autopay="false">Pay This ${billingCycle}</button>` : ''}
                         ${autopayEnabled
                             ? `<span class="admin-badge badge-paid">Autopay active</span><button type="button" class="portal-button portal-button-secondary" data-payment-action="contract-cancel-autopay" data-payment-id="${portal.escapeHtml(contract.id)}">Cancel Autopay</button>`
                             : `<button type="button" class="portal-button portal-button-secondary" data-payment-action="contract" data-payment-id="${portal.escapeHtml(contract.id)}" data-contract-autopay="true">Enable Autopay</button>`}
                         <p id="${actionId}" class="portal-inline-message" aria-live="polite"></p>
-                    </div>
+                    </div>` : ''}
                 </li>
             `;
         }).join('');

@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preload" href="styles.css?v=20261007" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="styles.css?v=20261007"></noscript>
-    <link rel="stylesheet" href="css/pdf-viewer.css?v=20261019">
+    <link rel="stylesheet" href="css/pdf-viewer.css?v=20261025d">
     <link rel="stylesheet" href="css/navigation.css?v=20261019">
-    <link rel="stylesheet" href="css/portal-admin.css?v=20261019">
+    <link rel="stylesheet" href="css/portal-admin.css?v=20261108u">
 </head>
 <body class="admin-page">
 <div class="topnav">
@@ -52,6 +52,7 @@
                 <button type="button" class="admin-tab-btn active" data-tab="clients">Clients</button>
                 <button type="button" class="admin-tab-btn" data-tab="invoices">Invoices</button>
                 <button type="button" class="admin-tab-btn" data-tab="contracts">Contracts</button>
+                <button type="button" class="admin-tab-btn" data-tab="labor-contracts">Labor Contracts</button>
                 <button type="button" class="admin-tab-btn" data-tab="contractors">Contractors</button>
             </div>
 
@@ -130,9 +131,10 @@
 
             <div id="admin-tab-panel-contracts" class="admin-tab-panel" hidden>
                 <div class="admin-section-header">
-                    <h2 class="admin-section-title">Contracts</h2>
-                    <button id="new-contract-btn" class="admin-btn admin-btn-sm">+ New Contract</button>
+                    <h2 class="admin-section-title">Maintenance Contracts</h2>
+                    <button id="new-contract-btn" class="admin-btn admin-btn-sm">+ New Maintenance Contract</button>
                 </div>
+                <div id="maintenance-contract-tracker" class="contract-tracker-panel">
                 <div class="admin-filter-bar">
                     <select id="contract-filter-client-select">
                         <option value="">All Clients</option>
@@ -152,23 +154,73 @@
                     </select>
                 </div>
                 <div class="admin-table-wrapper">
-                    <table class="admin-table">
+                    <table class="admin-table maintenance-contracts-table">
                         <thead>
                             <tr>
                                 <th>Contract #</th>
                                 <th>Status</th>
+                                <th>Payment</th>
                                 <th>Client</th>
-                                <th>Package / Cycle</th>
-                                <th>Dates</th>
+                                <th>Package</th>
+                                <th>Cycle</th>
+                                <th>Hours</th>
+                                <th>Start Date</th>
+                                <th>Next Due</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="contracts-tbody">
-                            <tr><td colspan="6" class="admin-empty">Loading...</td></tr>
+                            <tr><td colspan="10" class="admin-empty">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
                 <div id="mobile-contracts-list" class="mobile-record-list"></div>
+                </div>
+            </div>
+
+            <div id="admin-tab-panel-labor-contracts" class="admin-tab-panel" hidden>
+                <div class="admin-section-header">
+                    <h2 class="admin-section-title">Labor Contracts</h2>
+                    <button id="new-labor-contract-btn" class="admin-btn admin-btn-sm">+ New Labor Contract</button>
+                </div>
+                <div class="admin-filter-bar">
+                    <select id="labor-contract-filter-client-select" aria-label="Filter labor contracts by client">
+                        <option value="">All Clients</option>
+                    </select>
+                    <select id="labor-contract-filter-status-select" aria-label="Filter labor contracts by status">
+                        <option value="">All Statuses</option>
+                        <option value="draft">Draft</option>
+                        <option value="active">Active</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <select id="labor-contract-sort-select" aria-label="Sort labor contracts">
+                        <option value="startDate-desc">Newest First</option>
+                        <option value="startDate-asc">Oldest First</option>
+                        <option value="client-asc">Client (A-Z)</option>
+                        <option value="client-desc">Client (Z-A)</option>
+                        <option value="status-asc">Status</option>
+                    </select>
+                </div>
+                <section id="labor-contract-tracker" class="labor-contracts-section">
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table labor-contracts-table">
+                            <thead>
+                                <tr>
+                                    <th>Contract #</th>
+                                    <th>Status</th>
+                                    <th>Project</th>
+                                    <th>Client</th>
+                                    <th>Service Address</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="labor-contracts-tbody">
+                                <tr><td colspan="6" class="admin-empty">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="mobile-labor-contracts-list" class="mobile-record-list"></div>
+                </section>
             </div>
             <div id="admin-tab-panel-contractors" class="admin-tab-panel" hidden>
                 <div class="admin-section-header">
@@ -233,7 +285,7 @@
                 </div>
                 <div id="mobile-contractors-list" class="mobile-record-list"></div>
             </div>
-        </section>
+                </section>
     </div>
 </div>
 
@@ -248,11 +300,22 @@
                 <label>State <select data-address-part="state" data-state-select autocomplete="address-level1" required></select></label>
                 <label>ZIP Code <input data-address-part="zip" autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10"></label>
             </div>
-            <label>Service Addresses</label>
             <div id="client-service-addresses-container" class="client-service-addresses-container"></div>
-            <div class="client-service-address-actions">
+            <div id="client-businesses-container" class="client-service-addresses-container"></div>
+            <div class="client-service-address-actions client-form-add-actions">
                 <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost" id="add-client-service-address-btn">+ Add Service Address</button>
+                <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost" id="add-client-business-btn">+ Add Business</button>
+                <button id="show-client-merge-button" type="button" class="admin-btn admin-btn-sm admin-btn-ghost" aria-expanded="false" aria-controls="client-merge-section" hidden disabled>Merge Existing Client as Business</button>
             </div>
+            <section id="client-merge-section" class="client-merge-section" aria-labelledby="client-merge-title" hidden>
+                <h4 id="client-merge-title">Choose a Client</h4>
+                <p>The other account will be removed after its invoices, contracts, and business details are moved here.</p>
+                <label>Client account to merge
+                    <select id="client-merge-source-select"><option value="">Select a client…</option></select>
+                </label>
+                <button id="merge-client-button" type="button" class="admin-btn admin-btn-sm admin-btn-ghost" disabled>Merge as business</button>
+                <p id="client-merge-message" class="admin-message" aria-live="polite"></p>
+            </section>
             <div class="admin-modal-actions">
                 <button type="button" class="admin-btn admin-btn-ghost" data-close-modal="modal-new-client">Cancel</button>
                 <button type="submit" id="client-submit-button" class="admin-btn">Create Client</button>
@@ -287,11 +350,21 @@
                     <option value="">Select a client…</option>
                 </select>
             </label>
+            <label id="invoice-billing-business-wrapper" class="hidden">Bill To
+                <select id="invoice-billing-business-select">
+                    <option value="">Client</option>
+                </select>
+            </label>
             <label class="admin-checkbox-label invoice-ongoing-toggle"><input name="isOngoing" id="invoice-is-ongoing" type="checkbox"> Ongoing job</label>
             <label id="invoice-job-name-wrapper" class="hidden">Job / Project <input name="jobName" id="invoice-job-name" maxlength="160" placeholder="Job name (required for ongoing jobs)"></label>
             <label id="invoice-service-address-wrapper" class="hidden">Service Address
                 <select name="serviceAddress" id="invoice-service-address-select">
                     <option value="">Select a service address…</option>
+                </select>
+            </label>
+            <label id="invoice-contract-wrapper" class="hidden">Contract applied to this invoice
+                <select id="invoice-contract-select">
+                    <option value="">No contract</option>
                 </select>
             </label>
             <label>Issue Date <input name="issueDate" id="invoice-issue-date" type="date"></label>
@@ -313,6 +386,7 @@
 
             <div class="invoice-totals-panel">
                 <div class="invoice-total-readout">Calculated total: <strong id="invoice-calculated-total">$0.00</strong></div>
+                <p id="invoice-contract-pricing-summary" class="invoice-contract-pricing-summary hidden" aria-live="polite"></p>
                 <label>Final Invoice Total <input id="invoice-total-display" type="number" min="0" step="0.01" value="0.00"></label>
             </div>
 
@@ -329,41 +403,75 @@
     <div class="admin-modal">
         <h3 id="contract-modal-title">New Contract</h3>
         <form id="form-new-contract" class="admin-form">
+            <input type="hidden" name="contractType" id="contract-type" value="maintenance">
             <label>Client
                 <select name="clientId" id="contract-client-select" required>
                     <option value="">Select a client…</option>
                 </select>
             </label>
-            <label>Maintenance Package Type
-                <select name="packageType" id="contract-package-type" required>
-                    <option value="" selected disabled>Select package type…</option>
-                    <option value="single_home">Single Home</option>
-                    <option value="portfolio">Portfolio</option>
-                    <option value="custom">Custom</option>
+            <label id="contract-service-address-wrapper">Service Address
+                <select name="serviceAddress" id="contract-service-address-select" required>
+                    <option value="">Select a client first…</option>
                 </select>
             </label>
-            <label id="contract-package-level-wrapper" class="hidden">Package Level
-                <select name="packageLevel" id="contract-package-level">
-                    <option value="basic" selected>Basic</option>
-                    <option value="pro">Pro</option>
-                    <option value="premium">Premium</option>
-                </select>
-            </label>
-            <div id="contract-custom-package-fields" class="contract-custom-package-fields hidden">
-                <h4>Custom Package Details</h4>
-                <label>Monthly Cost <input name="packageMonthlyCost" type="number" min="0" step="0.01" placeholder="0.00"></label>
-                <label>Retainer Hours <input name="packageRetainerHours" type="number" min="0" step="0.25" placeholder="0"></label>
-                <label>Rollover Hours <input name="packageRolloverHours" type="number" min="0" step="0.25" value="0"></label>
-                <label>Service Discount (%) <input name="packageDiscountPercent" type="number" min="0" max="100" step="0.5" value="0"></label>
-                <div class="contract-custom-package-features">
-                    <label class="admin-checkbox-label"><input name="packagePriorityScheduling" type="checkbox"> Priority Scheduling</label>
-                    <label class="admin-checkbox-label"><input name="packageAnnualInspection" type="checkbox"> Annual Home Inspection</label>
-                    <label class="admin-checkbox-label"><input name="packageQuarterlyInspection" type="checkbox"> Quarterly Home Inspection</label>
-                    <label class="admin-checkbox-label"><input name="packageOnCallService" type="checkbox"> On-Call Service</label>
-                    <label class="admin-checkbox-label"><input name="packageTenantCoordination" type="checkbox"> Tenant Coordination</label>
+            <div id="contract-maintenance-fields" class="contract-type-fields">
+                <label>Maintenance Package Type
+                    <select name="packageType" id="contract-package-type" required>
+                        <option value="" selected disabled>Select package type…</option>
+                        <option value="single_home">Single Home</option>
+                        <option value="portfolio">Portfolio</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </label>
+                <label id="contract-package-level-wrapper" class="hidden">Package Level
+                    <select name="packageLevel" id="contract-package-level">
+                        <option value="basic" selected>Basic</option>
+                        <option value="pro">Pro</option>
+                        <option value="premium">Premium</option>
+                    </select>
+                </label>
+                <div id="contract-custom-package-fields" class="contract-custom-package-fields hidden">
+                    <h4>Custom Package Details</h4>
+                    <label>Property Coverage
+                        <select name="packageCoverageType" id="contract-package-coverage-type">
+                            <option value="single_home" selected>Single Home</option>
+                            <option value="portfolio">Portfolio</option>
+                        </select>
+                    </label>
+                    <label>Monthly Cost <input name="packageMonthlyCost" type="number" min="0" step="0.01" placeholder="0.00"></label>
+                    <label>Retainer Hours <input name="packageRetainerHours" type="number" min="0" step="0.25" placeholder="0"></label>
+                    <label>Rollover Hours <input name="packageRolloverHours" type="number" min="0" step="0.25" value="0"></label>
+                    <label>Service Discount (%) <input name="packageDiscountPercent" type="number" min="0" max="100" step="0.5" value="0"></label>
+                    <div class="contract-custom-package-features">
+                        <label class="admin-checkbox-label"><input name="packagePriorityScheduling" type="checkbox"> Priority Scheduling</label>
+                        <label class="admin-checkbox-label"><input name="packageAnnualInspection" type="checkbox"> Annual Home Inspection</label>
+                        <label class="admin-checkbox-label"><input name="packageQuarterlyInspection" type="checkbox"> Quarterly Home Inspection</label>
+                        <label class="admin-checkbox-label"><input name="packageOnCallService" type="checkbox"> On-Call Service</label>
+                        <label class="admin-checkbox-label"><input name="packageTenantCoordination" type="checkbox"> Tenant Coordination</label>
+                    </div>
                 </div>
             </div>
-            <label>Billing Cycle
+            <div id="contract-labor-fields" class="contract-type-fields hidden">
+                <label>Project / Job Title <input name="title" maxlength="160" placeholder="Project title"></label>
+                <label>Scope of Work <textarea name="scope" rows="4" maxlength="5000" placeholder="Describe the agreed work"></textarea></label>
+                <label>Pricing Model
+                    <select name="laborPricingModel" id="labor-pricing-model">
+                        <option value="fixed">Quoted Price</option>
+                        <option value="hourly_estimate">Hourly Estimate</option>
+                    </select>
+                </label>
+                <label id="labor-fixed-amount-wrapper">Quoted Price <input name="laborFixedAmount" type="number" min="0.01" step="0.01" placeholder="0.00"></label>
+                <div id="labor-estimate-wrapper" class="hidden">
+                    <div id="labor-estimate-contractor-hours-container" class="invoice-items-container"></div>
+                    <button type="button" id="add-labor-estimate-row-btn" class="admin-btn admin-btn-sm admin-btn-ghost">+ Contractor</button>
+                    <div id="labor-estimate-materials-container" class="invoice-items-container"></div>
+                    <button type="button" id="add-labor-estimate-material-btn" class="admin-btn admin-btn-sm admin-btn-ghost">+ Materials</button>
+                    <div id="labor-estimate-other-container" class="invoice-items-container"></div>
+                    <button type="button" id="add-labor-estimate-other-btn" class="admin-btn admin-btn-sm admin-btn-ghost">+ Other</button>
+                    <p id="labor-estimate-summary" class="portal-helper" aria-live="polite"></p>
+                </div>
+            </div>
+            <label id="contract-billing-cycle-wrapper">Billing Cycle
                 <select name="billingCycle">
                     <option value="monthly">Monthly</option>
                     <option value="quarterly">Quarterly</option>
@@ -377,6 +485,26 @@
             </div>
         </form>
         <p id="msg-new-contract" class="admin-message" aria-live="polite"></p>
+    </div>
+</div>
+
+<div id="modal-contract-attachments" class="admin-modal-backdrop hidden">
+    <div class="admin-modal contract-documents-modal" role="dialog" aria-modal="true" aria-labelledby="contract-attachments-title">
+        <header class="contract-documents-heading">
+            <h3 id="contract-attachments-title">Contract Documents</h3>
+            <button id="contract-documents-close" type="button" class="contract-documents-close" aria-label="Close contract documents" title="Close">&times;</button>
+        </header>
+        <button id="generate-contract-signing-link-btn" type="button" class="admin-btn" hidden>Generate Link</button>
+        <div id="contract-signing-link-copy" class="contract-signing-link-copy" hidden>
+            <input id="contract-signing-link" type="url" readonly placeholder="Signing link will appear here" aria-label="Client signing link">
+        </div>
+        <p id="contract-attachments-message" class="admin-message" aria-live="polite"></p>
+        <input id="contract-attachment-file" class="contract-attachment-file-input" type="file" accept="application/pdf,.pdf" aria-label="Choose a PDF to upload">
+        <button id="choose-contract-attachment-btn" type="button" class="admin-btn admin-btn-ghost">Upload PDF</button>
+        <section class="contract-attachments-section" aria-labelledby="contract-attachments-list-title">
+            <h4 id="contract-attachments-list-title">Attached PDFs</h4>
+            <ul id="contract-attachments-list" class="contract-attachments-list"></ul>
+        </section>
     </div>
 </div>
 
@@ -409,16 +537,21 @@
     <div class="portal-pdf-modal">
         <canvas id="portal-pdf-modal-canvas"></canvas>
         <button type="button" id="portal-pdf-modal-download" class="admin-btn portal-pdf-modal-download">Download PDF</button>
+        <div id="portal-pdf-modal-pages" class="portal-pdf-modal-page-controls" hidden aria-label="PDF pages">
+            <button type="button" id="portal-pdf-modal-previous" class="admin-btn admin-btn-sm admin-btn-ghost">Previous</button>
+            <span id="portal-pdf-modal-page-label" aria-live="polite">Page 1 of 1</span>
+            <button type="button" id="portal-pdf-modal-next" class="admin-btn admin-btn-sm admin-btn-ghost">Next</button>
+        </div>
         <button type="button" id="portal-pdf-modal-close" class="portal-pdf-modal-close" title="Close">&times;</button>
     </div>
 </div>
 
 <script src="portal-shared.js?v=20261007"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="js/admin/invoices.js?v=20261019"></script>
+<script src="js/admin/invoices.js?v=20261108r"></script>
 <script src="js/admin/contractors.js?v=20261019"></script>
-<script src="js/admin/clients.js?v=20261019"></script>
-<script src="js/admin/contracts.js?v=20261019"></script>
-<script src="js/portal-admin.js?v=20261019"></script>
+<script src="js/admin/clients.js?v=20261108f"></script>
+    <script src="js/admin/contracts.js?v=20261108w"></script>
+<script src="js/portal-admin.js?v=20261108p"></script>
 </body>
 </html>

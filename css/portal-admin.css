@@ -120,7 +120,7 @@
 }
 
 .admin-table-wrapper {
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: hidden;
     border-radius: 14px;
     border: 1px solid rgba(34,34,34,0.08);
@@ -129,8 +129,9 @@
 }
 
 .admin-table {
-    width: 100%;
-    table-layout: fixed;
+    width: max-content;
+    min-width: 100%;
+    table-layout: auto;
     border-collapse: collapse;
     font-size: 13px;
 }
@@ -160,15 +161,10 @@
 }
 #admin-tab-panel-contractors .admin-table thead th:nth-child(7) { width: 135px; }
 
-#admin-tab-panel-clients .admin-table,
-#admin-tab-panel-invoices .admin-table {
-    min-width: 0;
-}
-
 .contract-status-indicators {
     display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 4px;
     vertical-align: middle;
 }
@@ -206,11 +202,6 @@
     white-space: nowrap;
 }
 
-.admin-table td:not(:last-child) {
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
 #admin-tab-panel-clients .admin-table th:nth-child(4),
 #admin-tab-panel-clients .admin-table td:nth-child(4) {
     text-align: center;
@@ -224,8 +215,54 @@
 
 #admin-tab-panel-contracts .admin-table th:nth-child(6) { width: 190px; }
 
-#admin-tab-panel-contracts .admin-table td:last-child {
-    white-space: normal;
+#maintenance-contract-tracker .admin-table-wrapper {
+    overflow-x: auto;
+}
+
+#admin-tab-panel-contracts .maintenance-contracts-table {
+    width: 100%;
+    table-layout: auto;
+    min-width: 1120px;
+}
+
+#admin-tab-panel-contracts .maintenance-contracts-table thead th:nth-child(n) {
+    width: auto;
+    white-space: nowrap;
+}
+
+#admin-tab-panel-contracts .maintenance-contracts-table td:last-child {
+    white-space: nowrap;
+}
+
+.maintenance-contracts-table .contract-table-actions {
+    flex-wrap: nowrap;
+}
+
+.labor-contracts-section {
+    margin-top: 0;
+}
+
+#admin-tab-panel-labor-contracts .labor-contracts-table {
+    width: 100%;
+    min-width: 1080px;
+    table-layout: auto;
+}
+
+#admin-tab-panel-labor-contracts .labor-contracts-table thead th {
+    width: auto;
+}
+
+#admin-tab-panel-labor-contracts .labor-contracts-table thead th:last-child {
+    min-width: 190px;
+}
+
+.contract-type-fields {
+    display: grid;
+    gap: 12px;
+}
+
+.contract-type-fields.hidden {
+    display: none;
 }
 
 .contract-table-metadata {
@@ -238,9 +275,10 @@
 
 .contract-table-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 5px;
+    white-space: nowrap;
 }
 
 .admin-table td .admin-btn-sm {
@@ -276,10 +314,6 @@
     padding-left: 2px;
 }
 
-#admin-tab-panel-invoices .admin-table td:last-child {
-    white-space: normal;
-}
-
 #admin-tab-panel-invoices .invoice-table-actions {
     gap: 2px;
 }
@@ -305,6 +339,14 @@
 
     #admin-tab-panel-clients .mobile-record-list,
     #admin-tab-panel-invoices .mobile-record-list {
+        display: block;
+    }
+
+    #admin-tab-panel-labor-contracts .labor-contracts-section .admin-table-wrapper {
+        display: none;
+    }
+
+    #admin-tab-panel-labor-contracts .labor-contracts-section .mobile-record-list {
         display: block;
     }
 }
@@ -643,6 +685,9 @@
 .admin-modal-backdrop {
     position: fixed;
     inset: 0;
+    top: var(--admin-viewport-top, 0px);
+    bottom: auto;
+    height: var(--admin-viewport-height, 100dvh);
     background: rgba(0,0,0,0.35);
     z-index: 3000;
     display: flex;
@@ -680,6 +725,165 @@
 
 .admin-form { display: grid; gap: 12px; }
 
+.contract-attachments {
+    display: grid;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(34, 34, 34, 0.1);
+}
+
+.contract-attachments.hidden {
+    display: none;
+}
+
+.contract-attachments-header {
+    display: flex;
+    align-items: end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.contract-attachments-header > div {
+    margin-right: auto;
+}
+
+.contract-attachments-header h4,
+.contract-attachments-header p {
+    margin: 0;
+}
+
+.contract-attachments-header h4 {
+    color: #111827;
+    font-size: 15px;
+}
+
+.contract-attachments-header p,
+.contract-attachment-meta {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.contract-attachment-file-label {
+    display: flex !important;
+    align-items: center;
+    min-height: 36px;
+    gap: 8px !important;
+    font-size: 12px !important;
+}
+
+.contract-attachment-file-label input {
+    max-width: 250px;
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
+.contract-attachments-list {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.contract-attachment-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid rgba(34, 34, 34, 0.07);
+}
+
+.contract-attachment-info {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.contract-attachment-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+}
+
+.contract-attachment-delete {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: #647476;
+    font: 20px/1 Arial, sans-serif;
+    cursor: pointer;
+}
+
+.contract-attachment-delete:hover { background: #fcebea; color: #a2362c; }
+
+.contract-attachment-empty {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.contract-documents-modal {
+    width: min(420px, calc(100vw - 32px));
+    max-width: 420px;
+    max-height: 90vh;
+    gap: 12px;
+    padding: 22px;
+    border-radius: 12px;
+}
+
+.contract-documents-modal h3 { margin: 0; color: #172d32; font-size: 19px; }
+.contract-documents-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.contract-documents-close {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: #52666a;
+    font: 22px/1 Arial, sans-serif;
+    cursor: pointer;
+}
+.contract-documents-close:hover { background: #edf2ef; color: #172d32; }
+.contract-attachment-file-input { display: none; }
+.contract-documents-modal > button { width: 100%; }
+
+.contract-signing-link-copy[hidden],
+.generated-contract-action[hidden] { display: none !important; }
+.contract-signing-link-copy { margin: 0; }
+.contract-signing-link-copy input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid #b8c5c0;
+    border-radius: 3px;
+    background: #fff;
+    color: #172d32;
+    font: 14px/1.4 Arial, sans-serif;
+}
+
+.contract-documents-modal .admin-message {
+    min-height: 0;
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .contract-documents-modal { width: calc(100vw - 28px); padding: 18px; }
+}
+
 .admin-form label {
     display: grid;
     gap: 6px;
@@ -710,7 +914,8 @@
 }
 
 .admin-form input,
-.admin-form select {
+.admin-form select,
+.admin-form textarea {
     width: 100%;
     border: 1px solid rgba(34,34,34,0.18);
     border-radius: 10px;
@@ -719,6 +924,13 @@
     background: #fff;
     color: #111827;
     box-sizing: border-box;
+}
+
+.admin-form textarea {
+    min-height: 108px;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.4;
 }
 
 input[type="number"]::-webkit-outer-spin-button,
@@ -733,16 +945,10 @@ input[type="number"] {
 }
 
 .admin-form input:focus,
-.admin-form select:focus {
+.admin-form select:focus,
+.admin-form textarea:focus {
     outline: 2px solid rgba(34,34,34,0.12);
     border-color: rgba(34,34,34,0.4);
-}
-
-.admin-modal-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 6px;
 }
 
 .portal-pdf-modal-download {
@@ -872,6 +1078,37 @@ input[type="number"] {
     box-sizing: border-box;
 }
 
+.client-business-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: end;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid rgba(34,34,34,0.12);
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.client-business-row label { display: grid; gap: 5px; min-width: 0; }
+.client-business-row input { width: 100%; min-width: 0; }
+
+.client-merge-section {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #d5dfda;
+    border-radius: 6px;
+    background: #f5f8f6;
+}
+
+.client-merge-section h4,
+.client-merge-section p { margin: 0; }
+.client-merge-section h4 { color: #172d32; font-size: 14px; }
+.client-merge-section p { color: #52666a; font-size: 12px; line-height: 1.45; }
+.client-merge-section label { display: grid; gap: 5px; color: #35494d; font-size: 12px; font-weight: 700; }
+.client-merge-section select { width: 100%; min-height: 38px; }
+.client-merge-section[hidden] { display: none; }
+
 .client-service-address-header {
     display: flex;
     align-items: center;
@@ -897,6 +1134,7 @@ input[type="number"] {
     .client-service-address-row {
         grid-template-columns: minmax(0, 1fr);
     }
+    .client-business-row { grid-template-columns: minmax(0, 1fr); }
     .client-service-address-header .admin-btn {
         flex: 0 0 auto;
     }
@@ -906,6 +1144,18 @@ input[type="number"] {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+#form-new-client .client-service-addresses-container:empty { display: none; }
+#form-new-client .client-service-addresses-container { margin-bottom: 0; }
+.client-form-add-actions { align-items: stretch; }
+.client-form-add-actions [hidden] { display: none; }
+.client-form-add-actions .admin-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .admin-checkbox-label {
@@ -934,6 +1184,51 @@ input[type="number"] {
 
 .invoice-contractor-row {
     grid-template-columns: minmax(150px, 1fr) minmax(110px, 0.7fr) auto auto auto;
+}
+
+.labor-estimate-row {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto auto;
+    align-items: center;
+}
+
+.admin-form .labor-estimate-row label.invoice-item-inline-label {
+    display: grid;
+    grid-template-columns: 1fr;
+    min-width: 0;
+    white-space: normal;
+}
+
+.admin-form .labor-estimate-row label.invoice-item-inline-label input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.admin-form .labor-estimate-row select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.labor-estimate-row .invoice-contractor-rate {
+    white-space: nowrap;
+}
+
+.admin-form .labor-estimate-other-row {
+    grid-template-columns: minmax(0, 1fr) minmax(100px, 0.4fr) auto;
+}
+
+.admin-form .labor-estimate-other-row label.invoice-item-inline-label {
+    display: grid;
+    grid-template-columns: 1fr;
+    min-width: 0;
+    white-space: normal;
+}
+
+.admin-form .labor-estimate-other-row label.invoice-item-inline-label input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .invoice-contractor-rate {
@@ -1358,6 +1653,13 @@ input[type="number"] {
     }
 }
 
+.admin-modal-backdrop .admin-modal,
+#modal-new-invoice .admin-modal-wide {
+    box-sizing: border-box;
+    max-height: 100%;
+    scroll-padding-block: 20px;
+}
+
 .portal-pdf-modal-backdrop {
     z-index: 3500;
 }
@@ -1365,4 +1667,19 @@ input[type="number"] {
 .portal-pdf-modal canvas {
     bottom: 58px;
     height: calc(100% - 72px);
+}
+
+@media (max-width: 600px) {
+    .labor-estimate-row {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+    }
+
+    .admin-form .labor-estimate-other-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .labor-estimate-row .invoice-remove-row-btn {
+        width: 100%;
+    }
 }

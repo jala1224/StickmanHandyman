@@ -1,15 +1,18 @@
 import { getAdminUserByEmail, issueAdminSession, verifyAdminSession, verifyClientSession } from '../services/store.js';
 
+export function readBearerToken(req) {
+  return /^Bearer\s+(\S+)$/i.exec(String(req.headers.authorization || ''))?.[1] || '';
+}
+
 export function requireAdmin(req, res, next) {
-  const authHeader = req.headers.authorization ?? '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
+  const token = readBearerToken(req);
   const session = token ? verifyAdminSession(token) : null;
 
   if (!session) {
     return res.status(401).json({ error: 'Admin authentication required.' });
   }
 
-  req.admin = { id: session.adminId, email: session.email };
+  req.admin = { id: session.adminId, email: session.email, expiresAt: session.expiresAt };
   next();
 }
 
@@ -34,8 +37,7 @@ export function authenticateAdminLogin(email, password) {
 }
 
 export function requireClient(req, res, next) {
-  const authHeader = req.headers.authorization ?? '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
+  const token = readBearerToken(req);
   const session = token ? verifyClientSession(token) : null;
 
   if (!session) {

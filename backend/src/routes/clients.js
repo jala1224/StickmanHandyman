@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAdmin } from '../middleware/auth.js';
-import { getContractBillingPrice, getContractPaymentSummary } from '../services/contractPricing.js';
-import { createClient, deleteClient, findClientByNameAndAddress, getClientUserByAccountId, getClients, getContracts, getInvoices, issueLookupSession, recordAudit, setClientLoginCredentials, updateClient } from '../services/store.js';
+import { getClientActivity } from '../services/clientActivity.js';
+import { createClient, deleteClient, findClientByNameAndAddress, getClientUserByAccountId, getClients, issueLookupSession, mergeClientAsBusiness, recordAudit, setClientLoginCredentials, updateClient } from '../services/store.js';
 
 export const clientsRouter = Router();
 
@@ -10,6 +10,11 @@ const clientSchema = z.object({
   name: z.string().min(1),
   address: z.string().min(1),
   serviceAddresses: z.array(z.string().min(1)).optional(),
+  businesses: z.array(z.object({
+    id: z.string().min(1).optional(),
+    name: z.string().trim().min(1).max(160),
+    address: z.string().trim().min(1).max(500),
+  })).max(25).optional(),
   status: z.string().optional(),
 });
 
@@ -68,6 +73,43 @@ clientsRouter.put('/:clientId', requireAdmin, (req, res) => {
   });
 
   return res.json({ client });
+});
+
+clientsRouter.post('/:clientId/merge-business', requireAdmin, (req, res) => {
+  const parsed = z.object({ sourceClientId: z.string().min(1) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Select the client account to merge.' });
+
+  const result = mergeClientAsBusiness(req.params.clientId, parsed.data.sourceClientId);
+  if (result.error === 'CLIENT_NOT_FOUND') return res.status(404).json({ error: 'One of the client accounts was not found.' });
+  if (result.error === 'CLIENT_MERGE_SELF') return res.status(400).json({ error: 'Choose a different client account to merge.' });
+  if (result.error === 'CLIENT_MERGE_ACTIVE_SUBSCRIPTION') {
+    return res.status(409).json({ error: 'Cancel the source client’s active autopay subscription before merging these accounts.' });
+  }
+  if (result.error === 'CLIENT_MERGE_LOGIN_CONFLICT') {
+    return res.status(409).json({ error: 'Both accounts have client logins. Remove one login first so the merge can preserve access.' });
+  }
+
+  recordAudit({
+    actorType: 'admin',
+    actorId: req.admin.id,
+    action: 'client.merge_business',
+    entityType: 'client',
+    entityId: result.client.id,
+    metadata: {
+      sourceClientId: parsed.data.sourceClientId,
+      mergedBusinessId: result.mergedBusiness.id,
+      invoiceCount: result.invoiceCount,
+      contractCount: result.contractCount,
+      loginTransferred: result.loginTransferred,
+    },
+  });
+  return res.json({
+    client: result.client,
+    mergedBusiness: result.mergedBusiness,
+    invoiceCount: result.invoiceCount,
+    contractCount: result.contractCount,
+    loginTransferred: result.loginTransferred,
+  });
 });
 
 clientsRouter.put('/:clientId/login', requireAdmin, (req, res) => {
@@ -134,24 +176,7 @@ clientsRouter.post('/lookup', (req, res) => {
     return res.status(404).json({ found: false, message: 'No matching client records were found.' });
   }
 
-  const clientInvoices = getInvoices().filter((invoice) => invoice.status !== 'ongoing' && (invoice.accountId === client.id || invoice.clientId === client.id));
-  const clientContracts = getContracts()
-    .filter((contract) => contract.accountId === client.id || contract.clientId === client.id)
-    .map((contract) => {
-      const price = getContractBillingPrice(contract);
-      const { stripeSubscriptionId, ...publicContract } = contract;
-      return {
-        ...publicContract,
-        monthlyAmountCents: price?.monthlyAmountCents ?? null,
-        billingAmountCents: price?.amountCents ?? null,
-        autopayEnabled: Boolean(contract.autopayEnabled),
-        stripeSubscriptionStatus: contract.stripeSubscriptionStatus || null,
-        lastPaymentAt: contract.lastPaymentAt || null,
-        lastPaymentAmountCents: contract.lastPaymentAmountCents ?? null,
-        ...getContractPaymentSummary(contract),
-        stripeSubscriptionId: undefined,
-      };
-    });
+  const activity = getClientActivity(client);
   const lookupSession = issueLookupSession(client.id);
 
   return res.json({
@@ -166,7 +191,6 @@ clientsRouter.post('/lookup', (req, res) => {
     },
     lookupAccessToken: lookupSession.token,
     lookupAccessExpiresAt: new Date(lookupSession.expiresAt).toISOString(),
-    invoices: clientInvoices,
-    contracts: clientContracts,
+    ...activity,
   });
 });

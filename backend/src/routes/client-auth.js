@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { requireClient } from '../middleware/auth.js';
-import { activateClientUser, authenticateClientUser, getClientById, getClientUserByAccountId, recordAudit, updateClient, updateClientCredentials, updateClientUser } from '../services/store.js';
+import { readBearerToken, requireClient } from '../middleware/auth.js';
+import { getClientActivity } from '../services/clientActivity.js';
+import { activateClientUser, authenticateClientUser, getClientById, getClientUserByAccountId, recordAudit, revokeClientSession, updateClient, updateClientCredentials, updateClientUser } from '../services/store.js';
 
 export const clientAuthRouter = Router();
 
@@ -88,6 +89,11 @@ clientAuthRouter.post('/login', (req, res) => {
   });
 });
 
+clientAuthRouter.post('/logout', (req, res) => {
+  revokeClientSession(readBearerToken(req));
+  return res.status(204).end();
+});
+
 clientAuthRouter.get('/me', requireClient, (req, res) => {
   const account = getClientById(req.clientUser.accountId);
   const clientUser = getClientUserByAccountId(req.clientUser.accountId);
@@ -107,6 +113,12 @@ clientAuthRouter.get('/me', requireClient, (req, res) => {
     },
     clientUser,
   });
+});
+
+clientAuthRouter.get('/me/activity', requireClient, (req, res) => {
+  const account = getClientById(req.clientUser.accountId);
+  if (!account) return res.status(404).json({ error: 'Client account not found.' });
+  return res.json(getClientActivity(account));
 });
 
 clientAuthRouter.patch('/me', requireClient, (req, res) => {

@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "dev:stripe": "node scripts/dev.mjs --stripe-test",
     "dev:frontend": "node scripts/serve.mjs",
     "check": "node scripts/check.mjs",
     "test": "node --test backend/test/*.test.js",

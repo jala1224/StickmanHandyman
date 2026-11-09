@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import net from 'node:net';
+import { getLocalStripeEnvironment } from './local-stripe.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const localRoot = path.join(root, '.local');
@@ -16,6 +17,15 @@ if (![frontendPort, apiPort].every(port => Number.isInteger(port) && port > 0 &&
 if (!existsSync(path.join(root, 'backend/node_modules/express'))) {
   throw new Error('Install API dependencies first: npm --prefix backend ci');
 }
+const stripeEnabled = process.argv.includes('--stripe-test');
+const stripeFile = path.join(localRoot, 'stripe.env');
+if (stripeEnabled && !existsSync(stripeFile)) {
+  throw new Error('Create .local/stripe.env with Stripe test-mode credentials before running npm run dev:stripe.');
+}
+const stripeEnvironment = getLocalStripeEnvironment({
+  enabled: stripeEnabled,
+  contents: stripeEnabled ? readFileSync(stripeFile, 'utf8') : '',
+});
 
 async function checkPort(port) {
   await new Promise((resolve, reject) => {
@@ -68,11 +78,11 @@ start(path.join(root, 'backend/src/server.js'), [], {
   cwd: localRoot,
   env: {
     ...process.env,
-    NODE_ENV: 'development', PORT: String(apiPort), STICKMAN_BIND_ADDRESS: '127.0.0.1',
+    NODE_ENV: 'development', STICKMAN_LOCAL_SANDBOX: 'true', PORT: String(apiPort), STICKMAN_BIND_ADDRESS: '127.0.0.1',
     STICKMAN_DATA_DIR: dataDirectory, STICKMAN_INVOICES_DIR: invoicesDirectory,
     ADMIN_BOOTSTRAP_EMAIL: 'admin@local.test', ADMIN_BOOTSTRAP_PASSWORD: 'local-dev-only',
     CORS_ALLOWED_ORIGINS: `http://127.0.0.1:${frontendPort},http://localhost:${frontendPort}`,
-    STRIPE_SECRET_KEY: '', STRIPE_PUBLISHABLE_KEY: '', STRIPE_WEBHOOK_SECRET: '',
+    ...stripeEnvironment,
     SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '', EMAIL_FROM: '',
   },
 });
@@ -81,4 +91,7 @@ start(path.join(root, 'scripts/serve.mjs'), [`--port=${frontendPort}`], {
 });
 console.log(`Local test site: http://127.0.0.1:${frontendPort}`);
 console.log('Local admin: admin@local.test / local-dev-only');
-console.log('Sandbox: .local/ (separate records and PDFs; Stripe/email disabled). Ctrl+C stops both servers.');
+console.log(`Sandbox: .local/ (separate records and PDFs; Stripe ${stripeEnabled ? 'TEST MODE' : 'disabled'}; email disabled). Ctrl+C stops both servers.`);
+if (stripeEnabled && !stripeEnvironment.STRIPE_WEBHOOK_SECRET) {
+  console.warn('Stripe webhook secret is missing. Add the Stripe CLI signing secret to .local/stripe.env and restart to receive payment confirmations.');
+}

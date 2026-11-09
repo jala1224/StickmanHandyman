@@ -15,6 +15,7 @@ export const config = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? '',
   stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
+  localSandbox: process.env.NODE_ENV === 'development' && process.env.STICKMAN_LOCAL_SANDBOX === 'true',
   invoiceNumberStart: Number.parseInt(process.env.INVOICE_NUMBER_START ?? '1031', 10),
   contractNumberStart: Number.parseInt(process.env.CONTRACT_NUMBER_START ?? '2001', 10),
   smtpHost: process.env.SMTP_HOST ?? '',

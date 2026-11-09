@@ -36,6 +36,30 @@
     background: #fff;
 }
 
+.portal-pdf-modal-page-controls {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    z-index: 9;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transform: translateX(-50%);
+    color: #374151;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.portal-pdf-modal-page-controls[hidden] {
+    display: none;
+}
+
+.portal-pdf-modal.has-multiple-pages canvas {
+    bottom: 58px;
+    height: calc(100% - 72px);
+}
+
 .portal-pdf-modal-close {
     position: absolute;
     top: 8px;
@@ -69,5 +93,15 @@
 
     .portal-pdf-modal-close {
         display: none;
+    }
+
+    .portal-pdf-modal-page-controls {
+        bottom: 10px;
+        gap: 6px;
+    }
+
+    .portal-pdf-modal-page-controls .admin-btn {
+        min-height: 36px;
+        padding: 6px 8px;
     }
 }

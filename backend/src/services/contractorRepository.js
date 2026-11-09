@@ -22,7 +22,7 @@ function createOwnerContractor() {
 
 function loadData() {
   if (!existsSync(dataPath)) {
-    return { contractors: [createOwnerContractor()], timeEntries: [], ongoingJobs: [], invoiceHours: [] };
+    return { contractors: [createOwnerContractor()], timeEntries: [], ongoingJobs: [], invoiceHours: [], paymentTransactions: [] };
   }
 
   const data = JSON.parse(readFileSync(dataPath, 'utf8'));
@@ -128,6 +128,15 @@ export function buildContractorHourTiers(contractorHours = []) {
   });
 
   return tiers;
+}
+
+export function calculateContractorLaborEstimate(contractorHours = []) {
+  const estimatedHours = contractorHours.reduce((sum, entry) => sum + Math.max(0, Number(entry.hours || 0)), 0);
+  const estimatedAmountCents = buildContractorHourTiers(contractorHours).reduce(
+    (sum, tier) => sum + Math.round(tier.hours * tier.hourlyRateCents),
+    0,
+  );
+  return { estimatedHours, estimatedAmountCents };
 }
 
 export function buildContractorHourBreakdown(contractorHours = []) {

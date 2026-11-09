@@ -1,11 +1,36 @@
+    let invoiceContractPreviewSequence = 0;
+    let invoiceContractPreviewTimer = null;
+    let invoiceContractPricingReady = true;
+
+    function setInvoiceContractPricingReady(ready) {
+        invoiceContractPricingReady = ready;
+        $('invoice-submit-button').disabled = !ready;
+    }
+
+    function isInvoiceContractPricingReady() {
+        return invoiceContractPricingReady;
+    }
+
     function invoicePdfDownloadName(invoiceNumber) {
         const safeInvoiceNumber = String(invoiceNumber || 'Invoice').trim().replace(/^INV-/i, '').replace(/[^\w.-]+/g, '_');
         return `StickmanHandyman_${safeInvoiceNumber || 'Invoice'}.pdf`;
     }
 
-    async function openPdfModal(invoiceId) {
+    function contractPdfDownloadName(contractNumber) {
+        const safeContractNumber = String(contractNumber || 'Contract').trim().replace(/[^\w.-]+/g, '_');
+        return `StickmanHandyman_${safeContractNumber || 'Contract'}_Agreement.pdf`;
+    }
+
+    async function openPdfModal(invoiceId, documentType = 'invoice') {
+        const isContract = documentType === 'contract';
+        const record = isContract
+            ? allContracts.find((contract) => contract.id === invoiceId)
+            : adminInvoices.find((invoice) => invoice.id === invoiceId);
         viewedInvoiceId = invoiceId;
-        invoicePrintNumber = adminInvoices.find((invoice) => invoice.id === invoiceId)?.invoiceNumber || '';
+        invoicePrintNumber = isContract ? record?.contractNumber || '' : record?.invoiceNumber || '';
+        pdfDownloadFileName = isContract
+            ? contractPdfDownloadName(invoicePrintNumber)
+            : invoicePdfDownloadName(invoicePrintNumber);
         viewedInvoiceDocument = null;
         pdfModalDownload.disabled = true;
         pdfModalBackdrop.style.display = 'flex';
@@ -13,13 +38,33 @@
         document.body.style.overflow = 'hidden';
 
         try {
-            const url = `${apiBase}/api/invoices/${encodeURIComponent(invoiceId)}/pdf?disposition=inline`;
+            const endpoint = isContract ? 'contracts' : 'invoices';
+            const url = `${apiBase}/api/${endpoint}/${encodeURIComponent(invoiceId)}/pdf?disposition=inline`;
             const pdf = await window.pdfjsLib.getDocument({
                 url,
                 httpHeaders: { Authorization: `Bearer ${adminToken}` },
             }).promise;
             viewedInvoiceDocument = pdf;
-            const page = await pdf.getPage(1);
+            viewedPdfPageCount = pdf.numPages;
+            viewedPdfPageNumber = 1;
+            pdfModalPages.hidden = viewedPdfPageCount <= 1;
+            pdfModalBackdrop.querySelector('.portal-pdf-modal').classList.toggle('has-multiple-pages', viewedPdfPageCount > 1);
+            await renderPdfViewerPage(1);
+        } catch (error) {
+            console.error('Failed to render invoice PDF:', error);
+        }
+    }
+
+    async function renderPdfViewerPage(pageNumber) {
+        if (!viewedInvoiceDocument) return;
+        const nextPageNumber = Math.max(1, Math.min(viewedPdfPageCount, pageNumber));
+        viewedPdfPageNumber = nextPageNumber;
+        pdfModalPrevious.disabled = nextPageNumber === 1;
+        pdfModalNext.disabled = nextPageNumber === viewedPdfPageCount;
+        pdfModalPageLabel.textContent = `Page ${nextPageNumber} of ${viewedPdfPageCount}`;
+
+        try {
+            const page = await viewedInvoiceDocument.getPage(nextPageNumber);
             const containerRect = pdfModalCanvas.getBoundingClientRect();
             const displayWidth = Math.round(containerRect.width);
             const displayHeight = Math.round(containerRect.height);
@@ -34,15 +79,14 @@
             const context = pdfModalCanvas.getContext('2d');
             context.fillStyle = '#ffffff';
             context.fillRect(0, 0, pdfModalCanvas.width, pdfModalCanvas.height);
-
-            if (pdfRenderTask) {
-                pdfRenderTask.cancel();
-            }
+            if (pdfRenderTask) pdfRenderTask.cancel();
             pdfRenderTask = page.render({ canvasContext: context, viewport });
             await pdfRenderTask.promise;
             pdfModalDownload.disabled = false;
         } catch (error) {
-            console.error('Failed to render invoice PDF:', error);
+            if (error?.name !== 'RenderingCancelledException') {
+                console.error('Failed to render PDF page:', error);
+            }
         }
     }
 
@@ -52,7 +96,11 @@
         document.body.style.overflow = '';
         viewedInvoiceId = null;
         viewedInvoiceDocument = null;
+        viewedPdfPageNumber = 1;
+        viewedPdfPageCount = 0;
         pdfModalDownload.disabled = true;
+        pdfModalPages.hidden = true;
+        pdfModalBackdrop.querySelector('.portal-pdf-modal').classList.remove('has-multiple-pages');
         if (pdfRenderTask) {
             pdfRenderTask.cancel();
             pdfRenderTask = null;
@@ -65,6 +113,7 @@
     }
 
     function renderInvoicesTable() {
+        const invoiceBillingName = (invoice) => invoice.billingEntityName || clientName(invoice.accountId || invoice.clientId);
         let invoices = invoiceFilterClientId
             ? adminInvoices.filter((invoice) => (invoice.accountId || invoice.clientId) === invoiceFilterClientId)
             : adminInvoices.slice();
@@ -86,7 +135,7 @@
             <tr>
                 <td>${esc(invoice.invoiceNumber || invoice.jobName || 'Ongoing Job')}</td>
                 <td><span class="admin-badge badge-${esc(invoice.status)}">${esc(invoice.status)}</span></td>
-                <td>${esc(clientName(invoice.accountId || invoice.clientId))}</td>
+                <td>${esc(invoiceBillingName(invoice))}</td>
                 <td>$${(invoice.amountCents / 100).toFixed(2)}</td>
                 <td>${fmtDate(invoice.issueDate || invoice.createdAt)}</td>
                 <td><div class="invoice-table-actions">
@@ -114,7 +163,7 @@
             return mobileRecordCard(
                 invoiceLabel,
                 `<span class="admin-badge badge-${esc(invoice.status)}">${esc(invoice.status)}</span>`,
-                `${clientName(invoice.accountId || invoice.clientId)} · $${(Number(invoice.amountCents || 0) / 100).toFixed(2)}`,
+                `${invoiceBillingName(invoice)} · $${(Number(invoice.amountCents || 0) / 100).toFixed(2)}`,
                 [['Issue date', fmtDate(invoice.issueDate || invoice.createdAt)]],
                 actions,
                 true,
@@ -139,7 +188,7 @@
             $('invoice-client-select').append(snapshotOption);
         }
         $('invoice-client-select').value = invoice.accountId || invoice.clientId || '';
-        populateInvoiceServiceAddressSelect($('invoice-client-select').value || '');
+        populateInvoiceServiceAddressSelect($('invoice-client-select').value || '', invoice.serviceAddress || '', invoice.billingBusinessId || '');
         if (invoice.serviceAddress && !Array.from($('invoice-service-address-select').options).some((option) => option.value === invoice.serviceAddress)) {
             const serviceOption = document.createElement('option');
             serviceOption.value = invoice.serviceAddress;
@@ -155,6 +204,7 @@
         $('invoice-is-ongoing').disabled = invoice.status !== 'ongoing';
         $('invoice-job-name-wrapper').classList.toggle('hidden', invoice.status !== 'ongoing');
         $('invoice-issue-date').value = invoice.issueDate || getTodayLocalDate();
+        updateInvoiceContractOptions($('invoice-client-select').value, invoice.contractId || '');
         $('invoice-total-display').value = (Number(invoice.amountCents || 0) / 100).toFixed(2);
         (invoice.contractorHours || []).forEach((entry) => addContractorHoursRow(entry));
         if (!Array.isArray(invoice.contractorHours)) {
@@ -228,23 +278,187 @@
         }
     }
 
-    function populateInvoiceServiceAddressSelect(clientId) {
+    function populateInvoiceBillingBusinessSelect(clientId, selectedBusinessId = '') {
+        const wrapper = $('invoice-billing-business-wrapper');
+        const select = $('invoice-billing-business-select');
+        const client = allClients.find((entry) => entry.id === clientId);
+        const businesses = client?.businesses || [];
+        select.innerHTML = `<option value="">${esc(client?.name || 'Client')}</option>`
+            + businesses.map((business) => `<option value="${esc(business.id)}">${esc(business.name)}</option>`).join('');
+        wrapper.classList.toggle('hidden', !businesses.length);
+        select.value = businesses.some((business) => business.id === selectedBusinessId) ? selectedBusinessId : '';
+    }
+
+    function populateInvoiceServiceAddressSelect(clientId, selectedAddress = '', selectedBusinessId = '') {
         const select = $('invoice-service-address-select');
         const wrapper = $('invoice-service-address-wrapper');
         const client = allClients.find((entry) => entry.id === clientId) || null;
-        const addresses = client && Array.isArray(client.serviceAddresses)
-            ? client.serviceAddresses.filter((address) => String(address || '').trim())
-            : [];
+        populateInvoiceBillingBusinessSelect(clientId, selectedBusinessId);
+        const addressOptions = [];
+        const addAddress = (address, label) => {
+            const value = String(address || '').trim();
+            if (!value) return;
+            const existing = addressOptions.find((option) => option.value.toLocaleLowerCase() === value.toLocaleLowerCase());
+            if (existing) {
+                if (!existing.label.includes(label)) existing.label = `${existing.label} / ${label}`;
+                return;
+            }
+            addressOptions.push({ value, label: `${label} · ${value}` });
+        };
+        if (client) {
+            addAddress(client.address, 'Client');
+            (client.serviceAddresses || []).forEach((address) => addAddress(address, 'Service'));
+            (client.businesses || []).forEach((business) => addAddress(business.address, business.name));
+        }
 
         select.innerHTML = '<option value="">Select a service address…</option>'
-            + addresses.map((address) => `<option value="${esc(address)}">${esc(address)}</option>`).join('');
+            + addressOptions.map((option) => `<option value="${esc(option.value)}">${esc(option.label)}</option>`).join('');
 
-        if (addresses.length > 0) {
+        if (addressOptions.length > 1) {
             wrapper.classList.remove('hidden');
-            select.value = '';
+            const selectedBusiness = client?.businesses?.find((business) => business.id === selectedBusinessId);
+            select.value = selectedAddress || selectedBusiness?.address || '';
         } else {
             wrapper.classList.add('hidden');
-            select.value = '';
+            select.value = addressOptions[0]?.value || selectedAddress || '';
+        }
+        updateInvoiceContractOptions(clientId);
+    }
+
+    function invoiceContractCoversAddress(contract, client, serviceAddress) {
+        const address = String(serviceAddress || '').trim().toLocaleLowerCase();
+        if (!address) return false;
+        if (String(contract.serviceAddress || '').trim().toLocaleLowerCase() === address) return true;
+        const portfolio = contract.packageType === 'portfolio'
+            || (contract.packageType === 'custom' && contract.packageCoverageType === 'portfolio');
+        return contract.contractType !== 'labor' && portfolio;
+    }
+
+    function updateInvoiceContractOptions(clientId, preferredContractId = '') {
+        const wrapper = $('invoice-contract-wrapper');
+        const select = $('invoice-contract-select');
+        const client = allClients.find((entry) => entry.id === clientId);
+        const serviceAddress = $('invoice-service-address-select').value || client?.address || '';
+        const invoiceDate = $('invoice-issue-date').value || getTodayLocalDate();
+        const matches = allContracts.filter((contract) => {
+            const startDate = String(contract.startDate || contract.createdAt || '').slice(0, 10);
+            return contract.status === 'active'
+                && (contract.accountId || contract.clientId) === clientId
+                && invoiceContractCoversAddress(contract, client, serviceAddress)
+                && (!startDate || startDate <= invoiceDate);
+        });
+
+        if (!matches.length) {
+            select.innerHTML = '<option value="">No matching contract</option>';
+            wrapper.classList.add('hidden');
+            updateInvoiceTotals();
+            return;
+        }
+
+        select.innerHTML = [
+            ...(matches.length > 1 ? ['<option value="">Select a contract…</option>'] : []),
+            ...matches.map((contract) => {
+                const label = contract.contractType === 'labor'
+                    ? contract.title || 'Labor project'
+                    : contract.packageType === 'custom'
+                        ? `Custom ${contract.packageCoverageType === 'portfolio' ? 'Portfolio' : 'Single Home'}`
+                        : `${contract.packageType === 'portfolio' ? 'Portfolio' : 'Single Home'} ${contract.packageLevel || ''}`.trim();
+                return `<option value="${esc(contract.id)}">${esc(contract.contractNumber)} · ${esc(label)}</option>`;
+            }),
+        ].join('');
+        wrapper.classList.remove('hidden');
+        const selection = matches.some((contract) => contract.id === preferredContractId)
+            ? preferredContractId
+            : matches.length === 1 ? matches[0].id : '';
+        select.value = selection;
+        updateInvoiceTotals();
+    }
+
+    function getInvoiceBillingLineItems() {
+        const contractorHours = getContractorHoursRows();
+        const lineItems = getInvoiceItemRows();
+        const existing = adminInvoices.find((invoice) => invoice.id === editingInvoiceId);
+        const legacyManualLabor = Boolean(existing && !Array.isArray(existing.contractorHours) && contractorHours.length === 0);
+        return legacyManualLabor ? lineItems : [
+            ...buildContractorLaborItems(contractorHours),
+            ...lineItems.filter((item) => item.type !== 'labor'),
+        ];
+    }
+
+    async function refreshInvoiceContractPricing(subtotalCents, requestedAmountCents, sequence) {
+        const summary = $('invoice-contract-pricing-summary');
+        const selectedContractId = $('invoice-contract-select').value;
+        const clientId = $('invoice-client-select').value;
+        if (!clientId || $('invoice-is-ongoing').checked) {
+            summary.textContent = '';
+            summary.classList.add('hidden');
+            $('invoice-total-display').value = (subtotalCents / 100).toFixed(2);
+            $('invoice-total-display').dataset.calculatedCents = String(subtotalCents);
+            delete $('invoice-total-display').dataset.contractPreviewCents;
+            setInvoiceContractPricingReady(true);
+            return;
+        }
+        const contractSelectionRequired = !$('invoice-contract-wrapper').classList.contains('hidden')
+            && allContracts.filter((contract) => contract.status === 'active'
+                && (contract.accountId || contract.clientId) === clientId
+                && invoiceContractCoversAddress(contract, allClients.find((entry) => entry.id === clientId), $('invoice-service-address-select').value || allClients.find((entry) => entry.id === clientId)?.address || '')
+                && String(contract.startDate || contract.createdAt || '').slice(0, 10) <= ($('invoice-issue-date').value || getTodayLocalDate())).length > 1;
+
+        if (contractSelectionRequired && !selectedContractId) {
+            summary.textContent = 'Select which active contract to apply.';
+            summary.classList.remove('hidden');
+            $('invoice-total-display').value = (subtotalCents / 100).toFixed(2);
+            $('invoice-total-display').dataset.calculatedCents = String(subtotalCents);
+            setInvoiceContractPricingReady(false);
+            return;
+        }
+
+        const finalInput = $('invoice-total-display');
+        const existingInvoice = adminInvoices.find((invoice) => invoice.id === editingInvoiceId);
+        const lineItems = getInvoiceBillingLineItems();
+        const contractorHours = getContractorHoursRows();
+        const payload = {
+            accountId: clientId,
+            billingBusinessId: $('invoice-billing-business-select').value || null,
+            issueDate: $('invoice-issue-date').value || getTodayLocalDate(),
+            serviceAddress: $('invoice-service-address-select').value || undefined,
+            contractId: selectedContractId || undefined,
+            contractorHours: existingInvoice && !Array.isArray(existingInvoice.contractorHours) && !contractorHours.length ? undefined : contractorHours,
+            lineItems,
+            ...(requestedAmountCents == null ? {} : { amountCents: requestedAmountCents }),
+        };
+
+        try {
+            const response = await apiFetch('/api/invoices/contract-pricing-preview', {
+                method: 'POST',
+                body: JSON.stringify(payload),
+            });
+            const result = await response.json();
+            if (sequence !== invoiceContractPreviewSequence) return;
+            if (!response.ok) throw new Error(result.error || 'Unable to calculate contract pricing.');
+
+            if (result.pricing.contractId) {
+                finalInput.value = (Number(result.pricing.amountCents || 0) / 100).toFixed(2);
+                finalInput.dataset.contractPreviewCents = String(result.pricing.amountCents);
+                const pooledHoursUnavailable = result.pricing.contractType === 'maintenance'
+                    && result.pricing.contractPooledHoursEligible === false;
+                summary.textContent = pooledHoursUnavailable
+                    ? 'Pooled retainer hours are unavailable until this billing period is paid.'
+                    : '';
+                summary.classList.toggle('hidden', !pooledHoursUnavailable);
+            } else {
+                summary.textContent = '';
+                summary.classList.add('hidden');
+                if (requestedAmountCents == null) finalInput.value = (subtotalCents / 100).toFixed(2);
+                delete finalInput.dataset.contractPreviewCents;
+            }
+            finalInput.dataset.calculatedCents = String(subtotalCents);
+            setInvoiceContractPricingReady(true);
+        } catch (error) {
+            if (sequence !== invoiceContractPreviewSequence) return;
+            summary.textContent = error.message || 'Unable to calculate contract pricing.';
+            summary.classList.remove('hidden');
+            setInvoiceContractPricingReady(false);
         }
     }
 
@@ -424,12 +638,26 @@
         const finalTotalInput = $('invoice-total-display');
         const currentFinalTotal = Number(finalTotalInput.value || '0');
         const previousCalculatedCents = Number(finalTotalInput.dataset.calculatedCents || 'NaN');
+        const previousContractPreviewCents = Number(finalTotalInput.dataset.contractPreviewCents || 'NaN');
+        const currentAmountCents = Math.max(0, Math.round(currentFinalTotal * 100));
+        const isManualOverride = finalTotalInput.dataset.manualOverride === 'true'
+            && Number.isFinite(currentFinalTotal)
+            && currentAmountCents < subtotalCents
+            && currentAmountCents !== previousCalculatedCents
+            && currentAmountCents !== previousContractPreviewCents;
 
-        if (!Number.isFinite(currentFinalTotal) || currentFinalTotal <= 0 || Number.isFinite(previousCalculatedCents) && Math.round(currentFinalTotal * 100) === previousCalculatedCents) {
+        if (!isManualOverride) {
             finalTotalInput.value = (subtotalCents / 100).toFixed(2);
         }
 
         finalTotalInput.dataset.calculatedCents = String(subtotalCents);
+        const sequence = ++invoiceContractPreviewSequence;
+        const requestedAmountCents = isManualOverride ? currentAmountCents : null;
+        setInvoiceContractPricingReady(!$('invoice-client-select').value || $('invoice-is-ongoing').checked);
+        window.clearTimeout(invoiceContractPreviewTimer);
+        invoiceContractPreviewTimer = window.setTimeout(() => {
+            void refreshInvoiceContractPricing(subtotalCents, requestedAmountCents, sequence);
+        }, 120);
     }
 
     function resetInvoiceItemRows() {
@@ -438,6 +666,8 @@
         $('invoice-contractor-hours-container').innerHTML = '';
         $('invoice-total-display').value = '0.00';
         $('invoice-total-display').dataset.calculatedCents = '0';
+        delete $('invoice-total-display').dataset.manualOverride;
+        delete $('invoice-total-display').dataset.contractPreviewCents;
         $('invoice-calculated-total').textContent = '$0.00';
     }
 

@@ -75,6 +75,7 @@ try {
         '--include', 'portal-login.html',
         '--include', 'portal-client.html',
         '--include', 'portal-admin.html',
+        '--include', 'sign-contract.html',
         '--include', 'portal-shared.js',
         '--include', 'maintenance-packages.html',
         '--include', 'nav.html',

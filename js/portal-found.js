@@ -162,7 +162,7 @@
             return;
         }
 
-        if (paymentType === 'contract-autopay') {
+        if (paymentType === 'contract-manage-autopay') {
             setPortalTab('account');
             if (currentLookupAccount?.clientLoginEnabled) {
                 window.location.href = 'portal-login.html';
@@ -172,7 +172,7 @@
             return;
         }
 
-        if (paymentType === 'contract') {
+        if (paymentType === 'contract' || paymentType === 'contract-autopay') {
             if (!lookupAccessToken) {
                 if (paymentMessage) {
                     paymentMessage.textContent = 'Lookup access expired. Search for your account again.';
@@ -183,7 +183,7 @@
 
             button.disabled = true;
             if (paymentMessage) {
-                paymentMessage.textContent = 'Redirecting to Stripe checkout...';
+                paymentMessage.textContent = 'Opening secure checkout...';
                 paymentMessage.className = 'portal-inline-message';
             }
 
@@ -191,19 +191,22 @@
                 const response = await fetch(`${apiBase}/api/contracts/${encodeURIComponent(paymentId)}/checkout-session/lookup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ lookupAccessToken }),
+                    body: JSON.stringify({ lookupAccessToken, autopay: paymentType === 'contract-autopay', uiMode: 'embedded' }),
                 });
                 const payload = await response.json();
-                if (!response.ok || !payload.checkoutUrl) {
+                if (!response.ok) {
                     throw new Error(payload.error || 'Unable to start contract checkout right now.');
                 }
-                window.location.href = payload.checkoutUrl;
+                await window.StickmanPayments.open({ title: paymentType === 'contract-autopay' ? 'Enable autopay' : 'Contract payment', session: payload, onComplete: refreshLookupPayload });
             } catch (error) {
                 button.disabled = false;
                 if (paymentMessage) {
                     paymentMessage.textContent = error.message || 'Unable to start contract checkout right now.';
                     paymentMessage.className = 'portal-inline-message portal-inline-message-error';
                 }
+            } finally {
+                button.disabled = false;
+                if (paymentMessage && !paymentMessage.classList.contains('portal-inline-message-error')) paymentMessage.textContent = '';
             }
             return;
         }
@@ -226,7 +229,7 @@
 
         button.disabled = true;
         if (paymentMessage) {
-            paymentMessage.textContent = 'Redirecting to Stripe checkout...';
+            paymentMessage.textContent = 'Opening secure checkout...';
             paymentMessage.className = 'portal-inline-message';
         }
 
@@ -234,19 +237,22 @@
             const response = await fetch(`${apiBase}/api/invoices/${encodeURIComponent(paymentId)}/checkout-session`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lookupAccessToken, returnPath: 'portal-found.html' }),
+                body: JSON.stringify({ lookupAccessToken, returnPath: 'portal-found.html', uiMode: 'embedded' }),
             });
             const payload = await response.json();
-            if (!response.ok || !payload.checkoutUrl) {
+            if (!response.ok) {
                 throw new Error(payload.error || 'Unable to start checkout right now.');
             }
-            window.location.href = payload.checkoutUrl;
+            await window.StickmanPayments.open({ title: 'Invoice payment', session: payload, onComplete: refreshLookupPayload });
         } catch (error) {
             button.disabled = false;
             if (paymentMessage) {
                 paymentMessage.textContent = error.message || 'Unable to start checkout right now.';
                 paymentMessage.className = 'portal-inline-message portal-inline-message-error';
             }
+        } finally {
+            button.disabled = false;
+            if (paymentMessage && !paymentMessage.classList.contains('portal-inline-message-error')) paymentMessage.textContent = '';
         }
     });
 
@@ -370,20 +376,35 @@
             const billingCycle = contract.billingCycle === 'quarterly' ? 'quarter'
                 : contract.billingCycle === 'annually' ? 'year'
                     : 'month';
-            const packageLabel = contract.packageType === 'custom'
+            const isLaborContract = contract.contractType === 'labor';
+            const maintenanceSummary = contract.maintenanceSummary || {};
+            const retainerBalance = `${Number(maintenanceSummary.remainingHours ?? 0)} hours remaining`;
+            const packageLabel = isLaborContract
+                ? (contract.title || 'Labor contract')
+                : contract.packageType === 'custom'
                 ? 'Custom package'
                 : `${contract.packageType === 'portfolio' ? 'Portfolio' : 'Single Home'} ${contract.packageLevel ? `${contract.packageLevel.charAt(0).toUpperCase()}${contract.packageLevel.slice(1)}` : ''}`.trim();
+            const laborSummary = contract.laborSummary || {};
+            const laborEstimatedTotalCents = Number(laborSummary.estimatedTotalAmountCents
+                ?? (Number(contract.laborEstimatedAmountCents || 0) + Number(contract.laborEstimatedMaterialsCents || 0) + Number(contract.laborEstimatedOtherAmountCents || 0)));
+            const laborPricing = contract.laborPricingModel === 'fixed'
+                ? `Quoted price · $${(Number(contract.laborFixedAmountCents || 0) / 100).toFixed(2)}`
+                : `Hourly estimate · ${Number(contract.laborEstimatedHours || 0).toFixed(2)} hours · Labor $${(Number(contract.laborEstimatedAmountCents || 0) / 100).toFixed(2)} + materials $${(Number(contract.laborEstimatedMaterialsCents || 0) / 100).toFixed(2)} + other $${(Number(contract.laborEstimatedOtherAmountCents || 0) / 100).toFixed(2)} · $${(laborEstimatedTotalCents / 100).toFixed(2)} total estimate`;
+            const laborProgress = contract.laborPricingModel === 'fixed'
+                ? `$${(Number(laborSummary.invoicedAmountCents || 0) / 100).toFixed(2)} invoiced · $${(Number(laborSummary.remainingAmountCents || 0) / 100).toFixed(2)} remaining`
+                : `${Number(laborSummary.actualHours || 0).toFixed(2)} of ${Number(laborSummary.estimatedHours ?? contract.laborEstimatedHours ?? 0).toFixed(2)} hours tracked · $${(Number(laborSummary.invoicedAmountCents || 0) / 100).toFixed(2)} invoiced`;
             const autopayEnabled = Boolean(contract.autopayEnabled);
             const actionId = `portal-payment-action-${contract.id}`;
             return `
                 <li class="portal-activity-item">
                     <strong>${portal.escapeHtml(contract.contractNumber || 'Contract')}</strong>
-                    <p class="portal-activity-meta">${portal.escapeHtml(packageLabel)} | Status: ${portal.escapeHtml(contract.status || 'unknown')} | Start: ${portal.escapeHtml(contract.startDate || 'No start date')} | ${amountCents > 0 ? `$${(amountCents / 100).toFixed(2)} per ${billingCycle}` : 'Price unavailable'}</p>
-                    ${isPayable ? `
+                    <p class="portal-activity-meta">${portal.escapeHtml(packageLabel)} | Status: ${portal.escapeHtml(contract.status || 'unknown')} | Start: ${portal.escapeHtml(contract.startDate || 'No start date')} | ${isLaborContract ? `${portal.escapeHtml(laborPricing)} · ${portal.escapeHtml(laborProgress)}` : `${amountCents > 0 ? `$${(amountCents / 100).toFixed(2)} per ${billingCycle}` : 'Price unavailable'} · ${retainerBalance}`}</p>
+                    ${isLaborContract ? `<p class="portal-activity-meta">Service address: ${portal.escapeHtml(contract.serviceAddress || '—')}<br>Scope: ${portal.escapeHtml(contract.scope || '—')}</p>` : ''}
+                    ${!isLaborContract && isPayable ? `
                         <div class="portal-inline-actions">
                             ${amountCents > 0 ? `<button type="button" class="portal-button portal-button-secondary" data-payment-action="contract" data-payment-id="${portal.escapeHtml(contract.id)}">Pay This ${billingCycle}</button>` : ''}
                             ${autopayEnabled
-                                ? `<span class="admin-badge badge-paid">Autopay active</span><button type="button" class="portal-button portal-button-secondary" data-payment-action="contract-autopay" data-payment-id="${portal.escapeHtml(contract.id)}">Manage Autopay</button>`
+                                ? `<span class="admin-badge badge-paid">Autopay active</span><button type="button" class="portal-button portal-button-secondary" data-payment-action="contract-manage-autopay" data-payment-id="${portal.escapeHtml(contract.id)}">Manage Autopay</button>`
                                 : `<button type="button" class="portal-button portal-button-secondary" data-payment-action="contract-autopay" data-payment-id="${portal.escapeHtml(contract.id)}">Enable Autopay</button>`}
                             <p id="${actionId}" class="portal-inline-message" aria-live="polite"></p>
                         </div>

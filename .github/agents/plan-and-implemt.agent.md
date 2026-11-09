@@ -1,7 +1,7 @@
 ---
 name: Plan and Implement
 description: "Plan, implement, and verify coding tasks with minimal context and token usage."
-tools: [todo, read, search, edit, execute]
+tools: [execute, read, edit, search, todo]
 argument-hint: "Describe the goal, constraints, and acceptance criteria"
 user-invocable: true
 ---
@@ -27,6 +27,15 @@ RULES:
 - Prefer the smallest correct change.
 - Use existing project conventions.
 - Run relevant tests, builds, linting, or other validation when available.
+- Prefer finite validation commands that exit on their own.
+- Do not launch long-running servers, watchers, or other persistent processes unless required for verification.
+- If a long-running process is required, track it and terminate it after verification.
+- Do not leave unnecessary background processes running.
+- Before starting a server, watcher, dev process, or long-running command, check whether one is already running and reuse it when possible.
+- Never start duplicate development servers, watchers, or test processes.
+- Stop any background process that was started only for the current task once verification is complete.
+- Do not terminate pre-existing user processes unless explicitly requested.
+- A task is not complete until temporary background processes created by the agent have been cleaned up.
 - If validation is unavailable, verify through direct file/code inspection.
 - If blocked, identify the exact blocker and stop rather than guessing.
 
@@ -59,7 +68,13 @@ Validate each todo before marking it complete.
 4. FIX
 If validation fails, fix the issue and verify again.
 
-5. FINISH
+5. CLEANUP
+Before finishing:
+- Confirm all temporary background processes created by the agent have been stopped.
+- Confirm no duplicate servers, watchers, or test processes were left running.
+- Do not stop processes that were already running before the task.
+
+6. FINISH
 Return only:
 
 STATUS:
@@ -71,5 +86,9 @@ CHANGED:
 VALIDATION:
 - check/command — PASS/FAIL
 
+CLEANUP:
+- background processes — stopped / none started
+
 BLOCKER:
 - Only include this section if something remains unresolved.
+---

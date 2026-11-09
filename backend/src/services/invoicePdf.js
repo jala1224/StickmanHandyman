@@ -38,6 +38,8 @@ const BILLING_DATE_POSITION = { left: 13.4, top: 28.3 };
 const INVOICE_NUMBER_POSITION = { left: 17.3, top: 38.8 };
 const BILLING_INVOICE_NUMBER_POSITION = { left: 17.3, top: 30.8 };
 const TOTAL_DUE_TOP_PERCENT = 92.6;
+const TOTAL_BREAKDOWN_STEP_PERCENT = 2.5;
+const TOTAL_BREAKDOWN_LABEL_LEFT_PERCENT = 59;
 
 const ITEM_CENTER_PERCENT = 12.85;
 const QTY_CENTER_PERCENT = 40.46;
@@ -158,15 +160,15 @@ export async function generateInvoicePdfBuffer(invoice, client) {
     readFile(boldFontPath),
     readFile(boldItalicFontPath),
   ]);
-  const boldFont = await pdfDoc.embedFont(boldFontBytes);
-  const boldItalicFont = await pdfDoc.embedFont(boldItalicFontBytes);
+  const boldFont = await pdfDoc.embedFont(boldFontBytes, { features: { liga: false } });
+  const boldItalicFont = await pdfDoc.embedFont(boldItalicFontBytes, { features: { liga: false } });
 
   const page = pdfDoc.getPage(0);
   const black = rgb(0.067, 0.094, 0.153);
 
   const issueDate = invoice.issueDate || new Date().toISOString().slice(0, 10);
-  const clientName = client ? client.name : 'Client Unassigned';
-  const billingAddress = client ? client.address : '';
+  const clientName = invoice.billingEntityName || (client ? client.name : 'Client Unassigned');
+  const billingAddress = invoice.billingEntityAddress || (client ? client.address : '');
   const serviceAddress = invoice.serviceAddress || '';
   const datePosition = hasServiceAddress ? SERVICE_DATE_POSITION : BILLING_DATE_POSITION;
   const invoiceNumberPosition = hasServiceAddress ? INVOICE_NUMBER_POSITION : BILLING_INVOICE_NUMBER_POSITION;
@@ -281,6 +283,36 @@ export async function generateInvoicePdfBuffer(invoice, client) {
     });
   });
 
+  const subtotalCents = Math.max(0, Number(invoice.subtotalCents ?? (amountDue + Number(invoice.discountCents || 0))));
+  const retainerCreditCents = Math.max(0, Number(invoice.retainerCreditCents || 0));
+  const serviceDiscountCents = Math.max(0, Number(invoice.serviceDiscountCents || 0));
+  const totalDiscountCents = Math.max(0, Number(invoice.discountCents ?? (subtotalCents - amountDue)));
+  const additionalDiscountCents = Math.max(0, totalDiscountCents - retainerCreditCents - serviceDiscountCents);
+  const breakdownRows = [{ label: 'Subtotal', amountCents: subtotalCents }];
+  if (retainerCreditCents > 0) breakdownRows.push({ label: 'Retainer credit', amountCents: -retainerCreditCents });
+  if (serviceDiscountCents > 0) breakdownRows.push({ label: 'Labor discount', amountCents: -serviceDiscountCents });
+  if (additionalDiscountCents > 0) breakdownRows.push({ label: 'Additional discount', amountCents: -additionalDiscountCents });
+
+  breakdownRows.forEach((row, index) => {
+    const topPercent = TOTAL_DUE_TOP_PERCENT - (breakdownRows.length - index) * TOTAL_BREAKDOWN_STEP_PERCENT;
+    const label = row.label;
+    const amountText = `${row.amountCents < 0 ? '-' : ''}$${formatPlainAmount(Math.abs(row.amountCents))}`;
+    page.drawText(label, {
+      x: leftPercentToX(TOTAL_BREAKDOWN_LABEL_LEFT_PERCENT),
+      y: topPercentToBaselineY(topPercent),
+      size: FONT_SIZE,
+      font: boldFont,
+      color: black,
+    });
+    page.drawText(amountText, {
+      x: decimalAlignedX(amountText, boldFont, FONT_SIZE, leftPercentToX(AMOUNT_DECIMAL_ANCHOR_PERCENT)),
+      y: topPercentToBaselineY(topPercent),
+      size: FONT_SIZE,
+      font: boldFont,
+      color: black,
+    });
+  });
+
   const totalText = formatPlainAmount(amountDue);
   page.drawText(totalText, {
     x: decimalAlignedX(totalText, boldFont, FONT_SIZE, leftPercentToX(AMOUNT_DECIMAL_ANCHOR_PERCENT)),
@@ -304,6 +336,12 @@ export function invoicePdfFileName(invoiceNumber) {
 }
 
 export async function getInvoicePdfBuffer(invoice, client) {
+  const addressHasFi = /fi/i.test(String(invoice.billingEntityAddress || client?.address || ''))
+    || /fi/i.test(String(invoice.serviceAddress || ''));
+  if (invoice.contractId || Number(invoice.discountCents || 0) > 0 || addressHasFi) {
+    return generateInvoicePdfBuffer(invoice, client);
+  }
+
   const savedPath = invoicePdfPath(invoice.invoiceNumber);
   if (existsSync(savedPath)) {
     return readFile(savedPath);

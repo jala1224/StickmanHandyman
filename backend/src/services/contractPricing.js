@@ -84,3 +84,32 @@ export function getContractPaymentSummary(contract, nowValue = new Date()) {
     nextPaymentDueAt: nextPaymentDueAt ? nextPaymentDueAt.toISOString().slice(0, 10) : null,
   };
 }
+
+export function getManualContractPaymentChanges(contract, paidAt = new Date()) {
+  if ((contract.contractType || 'maintenance') !== 'maintenance') {
+    return { error: 'Manual cycle payments are only available for maintenance contracts.' };
+  }
+  const price = getContractBillingPrice(contract);
+  if (!price) return { error: 'This contract does not have a valid billing amount.' };
+
+  const paymentDate = paidAt instanceof Date ? paidAt : new Date(paidAt);
+  if (Number.isNaN(paymentDate.getTime())) return { error: 'A valid payment date is required.' };
+  const paymentDateIso = paymentDate.toISOString();
+  const summary = getContractPaymentSummary(contract, paymentDate);
+  if (summary.paymentStatus === 'Paid') return { error: 'This billing cycle is already marked paid.' };
+
+  const currentDueDate = summary.nextPaymentDueAt
+    ? new Date(`${summary.nextPaymentDueAt}T00:00:00.000Z`)
+    : null;
+  const nextPaymentDueAt = currentDueDate && currentDueDate > paymentDate
+    ? summary.nextPaymentDueAt
+    : getNextContractPaymentDueAt(contract, paymentDateIso);
+
+  return {
+    changes: {
+      lastPaymentAt: paymentDateIso,
+      lastPaymentAmountCents: price.amountCents,
+      nextPaymentDueAt,
+    },
+  };
+}

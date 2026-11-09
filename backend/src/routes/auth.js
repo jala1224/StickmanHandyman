@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticateAdminLogin } from '../middleware/auth.js';
+import { authenticateAdminLogin, readBearerToken, requireAdmin } from '../middleware/auth.js';
+import { revokeAdminSession } from '../services/store.js';
 
 export const authRouter = Router();
 
@@ -23,5 +24,15 @@ authRouter.post('/login', (req, res) => {
   return res.json({
     admin: { id: session.id, email: session.email },
     token: session.token,
+    expiresAt: session.expiresAt,
   });
+});
+
+authRouter.get('/me', requireAdmin, (req, res) => {
+  return res.json({ admin: { id: req.admin.id, email: req.admin.email }, expiresAt: req.admin.expiresAt });
+});
+
+authRouter.post('/logout', (req, res) => {
+  revokeAdminSession(readBearerToken(req));
+  return res.status(204).end();
 });
