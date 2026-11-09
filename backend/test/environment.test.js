@@ -214,6 +214,7 @@ test('admin startup binds contract and contractor creation buttons and Cancel di
   context.window.alert = message => downloads.push({ alert: message });
   document.createElement = () => ({ click() { downloads.push('blob download'); }, remove() {} });
   document.body.appendChild = () => {};
+  context.window.matchMedia = () => ({ matches: true });
   context.countRead = () => { dataReads += 1; };
   vm.runInContext(`
     viewedInvoiceId = 'invoice-1';
@@ -247,6 +248,15 @@ test('admin startup binds contract and contractor creation buttons and Cancel di
 
   context.navigator.canShare = undefined;
   await clickDownload();
+  assert.deepEqual(downloads, ['blob download']);
+
+  downloads.length = 0;
+  const sharesBeforeDesktop = shares.length;
+  context.navigator.canShare = () => true;
+  context.navigator.share = async payload => { shares.push(payload); };
+  context.window.matchMedia = () => ({ matches: false });
+  await clickDownload();
+  assert.equal(shares.length, sharesBeforeDesktop);
   assert.deepEqual(downloads, ['blob download']);
 });
 

@@ -67,7 +67,8 @@
             const fileName = pdfDownloadFileName || invoicePdfDownloadName(invoicePrintNumber);
             const pdfData = viewedPdfFile ? null : await viewedInvoiceDocument.getData();
             const file = viewedPdfFile || new File([pdfData], fileName, { type: 'application/pdf' });
-            if (navigator.canShare?.({ files: [file] })) {
+            const prefersShareSheet = window.matchMedia?.('(pointer: coarse)').matches;
+            if (prefersShareSheet && navigator.canShare?.({ files: [file] })) {
                 try {
                     // Files only: adding title/text/url makes iOS append a link to the site.
                     await navigator.share({ files: [file] });
