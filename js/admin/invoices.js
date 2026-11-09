@@ -32,6 +32,7 @@
             ? contractPdfDownloadName(invoicePrintNumber)
             : invoicePdfDownloadName(invoicePrintNumber);
         viewedInvoiceDocument = null;
+        viewedPdfFile = null;
         pdfModalDownload.disabled = true;
         pdfModalBackdrop.style.display = 'flex';
         pdfModalBackdrop.classList.remove('hidden');
@@ -45,6 +46,10 @@
                 httpHeaders: { Authorization: `Bearer ${adminToken}` },
             }).promise;
             viewedInvoiceDocument = pdf;
+            // Prepared ahead so the share sheet opens inside the tap's user gesture on iOS.
+            pdf.getData().then((data) => {
+                if (viewedInvoiceDocument === pdf) viewedPdfFile = new File([data], pdfDownloadFileName, { type: 'application/pdf' });
+            }).catch(() => {});
             viewedPdfPageCount = pdf.numPages;
             viewedPdfPageNumber = 1;
             pdfModalPages.hidden = viewedPdfPageCount <= 1;
@@ -96,6 +101,7 @@
         document.body.style.overflow = '';
         viewedInvoiceId = null;
         viewedInvoiceDocument = null;
+        viewedPdfFile = null;
         viewedPdfPageNumber = 1;
         viewedPdfPageCount = 0;
         pdfModalDownload.disabled = true;

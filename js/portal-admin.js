@@ -44,6 +44,7 @@
     let pdfRenderTask = null;
     let viewedInvoiceId = null;
     let viewedInvoiceDocument = null;
+    let viewedPdfFile = null;
     let viewedPdfPageNumber = 1;
     let viewedPdfPageCount = 0;
     let invoicePrintNumber = '';
@@ -63,8 +64,19 @@
 
         pdfModalDownload.disabled = true;
         try {
-            const pdfData = await viewedInvoiceDocument.getData();
-            const downloadUrl = URL.createObjectURL(new Blob([pdfData], { type: 'application/pdf' }));
+            const fileName = pdfDownloadFileName || invoicePdfDownloadName(invoicePrintNumber);
+            const pdfData = viewedPdfFile ? null : await viewedInvoiceDocument.getData();
+            const file = viewedPdfFile || new File([pdfData], fileName, { type: 'application/pdf' });
+            if (navigator.canShare?.({ files: [file] })) {
+                try {
+                    // Files only: adding title/text/url makes iOS append a link to the site.
+                    await navigator.share({ files: [file] });
+                    return;
+                } catch (shareError) {
+                    if (shareError?.name === 'AbortError') return;
+                }
+            }
+            const downloadUrl = URL.createObjectURL(file);
             const link = document.createElement('a');
             link.href = downloadUrl;
             link.download = pdfDownloadFileName || invoicePdfDownloadName(invoicePrintNumber);

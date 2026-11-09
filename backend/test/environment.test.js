@@ -204,6 +204,50 @@ test('admin startup binds contract and contractor creation buttons and Cancel di
   assert.equal(elements.get('contract-signing-link-copy').hidden, false);
   assert.match(elements.get('contract-attachments-message').textContent, /blocked automatic copying/);
   assert.equal(elements.get('generate-contract-signing-link-btn').disabled, false);
+
+  const shares = [];
+  const downloads = [];
+  let dataReads = 0;
+  context.File = File;
+  context.URL = { createObjectURL: () => 'blob:fallback', revokeObjectURL() {} };
+  context.navigator = { canShare: () => true, share: async payload => { shares.push(payload); } };
+  context.window.alert = message => downloads.push({ alert: message });
+  document.createElement = () => ({ click() { downloads.push('blob download'); }, remove() {} });
+  document.body.appendChild = () => {};
+  context.countRead = () => { dataReads += 1; };
+  vm.runInContext(`
+    viewedInvoiceId = 'invoice-1';
+    pdfDownloadFileName = 'StickmanHandyman_1031.pdf';
+    viewedPdfFile = null;
+    viewedInvoiceDocument = { getData: async () => { countRead(); return new Uint8Array([37, 80, 68, 70]); } };
+  `, context);
+  const clickDownload = async () => {
+    elements.get('portal-pdf-modal-download').dispatchEvent({ type: 'click' });
+    await new Promise(resolve => setImmediate(resolve));
+  };
+  await clickDownload();
+  assert.equal(shares.length, 1);
+  assert.deepEqual(Object.keys(shares[0]), ['files']);
+  assert.equal(shares[0].files[0].name, 'StickmanHandyman_1031.pdf');
+  assert.equal(shares[0].files[0].type, 'application/pdf');
+  assert.equal(downloads.length, 0);
+  assert.equal(elements.get('portal-pdf-modal-download').disabled, false);
+
+  const prefetched = new File([new Uint8Array([37, 80, 68, 70])], 'Prefetched.pdf', { type: 'application/pdf' });
+  context.prefetchedFile = prefetched;
+  vm.runInContext('viewedPdfFile = prefetchedFile;', context);
+  const readsBeforePrefetched = dataReads;
+  await clickDownload();
+  assert.equal(shares.at(-1).files[0], prefetched);
+  assert.equal(dataReads, readsBeforePrefetched);
+
+  context.navigator.share = async () => { throw Object.assign(new Error('cancelled'), { name: 'AbortError' }); };
+  await clickDownload();
+  assert.equal(downloads.length, 0);
+
+  context.navigator.canShare = undefined;
+  await clickDownload();
+  assert.deepEqual(downloads, ['blob download']);
 });
 
 test('signing page uses shared website navigation and its mobile menu', async () => {
