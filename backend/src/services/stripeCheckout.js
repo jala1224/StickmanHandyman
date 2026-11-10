@@ -80,6 +80,71 @@ export function getInvoicePaymentEvent(event) {
 
 const pendingInvoiceSessions = new Map();
 
+export async function withInvoicePaymentLock(invoiceId, operation) {
+  const previous = pendingInvoiceSessions.get(invoiceId) || Promise.resolve();
+  const request = previous.catch(() => {}).then(operation);
+  pendingInvoiceSessions.set(invoiceId, request);
+  try {
+    return await request;
+  } finally {
+    if (pendingInvoiceSessions.get(invoiceId) === request) pendingInvoiceSessions.delete(invoiceId);
+  }
+}
+
+export async function cancelTerminalInvoicePayment(stripe, invoice, saveState) {
+  if (!invoice?.stripeTerminalPaymentIntentId || invoice.status === 'paid') return;
+  const intent = await stripe.paymentIntents.retrieve(invoice.stripeTerminalPaymentIntentId);
+  if (intent.status !== 'canceled') {
+    if (!['requires_payment_method', 'requires_confirmation'].includes(intent.status)) {
+      throw Object.assign(new Error('A Tap to Pay payment has been submitted. Reconcile its status before changing the invoice or using a payment link.'), { statusCode: 409 });
+    }
+    await stripe.paymentIntents.cancel(intent.id);
+  }
+  saveState(invoice.id, { stripeTerminalPaymentIntentId: null, stripeTerminalLastPaymentIntentId: intent.id, stripePaymentIntentId: null, stripePaymentStatus: 'canceled' });
+}
+
+export async function createTerminalInvoicePayment(stripe, invoice, saveState) {
+  return withInvoicePaymentLock(invoice.id, async () => {
+    if (['paid', 'void', 'ongoing'].includes(invoice.status) || !Number.isInteger(invoice.amountCents) || invoice.amountCents <= 0) {
+      throw Object.assign(new Error('This invoice is not currently payable.'), { statusCode: 409 });
+    }
+    if (String(invoice.currency || 'usd').toLowerCase() !== 'usd') {
+      throw Object.assign(new Error('US Tap to Pay requires a USD invoice.'), { statusCode: 409 });
+    }
+    if (invoice.stripeCheckoutSessionId) {
+      const session = await stripe.checkout.sessions.retrieve(invoice.stripeCheckoutSessionId);
+      if (!await canReplaceCheckoutSession(stripe, session)) {
+        throw Object.assign(new Error('An online payment has already been submitted. Refresh the invoice.'), { statusCode: 409 });
+      }
+      if (session.status === 'open') await stripe.checkout.sessions.expire(session.id);
+      saveState(invoice.id, { stripeCheckoutUrl: null, stripeCheckoutExpiresAt: null });
+    }
+    const previousId = invoice.stripeTerminalPaymentIntentId;
+    if (previousId) {
+      const current = await stripe.paymentIntents.retrieve(previousId);
+      if (matchesInvoicePayment(invoice, { amountCents: current.amount, currency: current.currency })
+        && ['requires_payment_method', 'requires_confirmation'].includes(current.status)) return current;
+      if (current.status !== 'canceled') {
+        throw Object.assign(new Error('A Tap to Pay payment is already submitted or does not match this invoice. Reconcile it before retrying.'), { statusCode: 409 });
+      }
+    }
+    const intent = await stripe.paymentIntents.create({
+      amount: invoice.amountCents, currency: 'usd', payment_method_types: ['card_present'],
+      capture_method: 'automatic', metadata: { invoiceId: invoice.id, source: 'terminal' },
+      description: `Invoice ${invoice.invoiceNumber}`,
+    }, { idempotencyKey: `terminal:${invoice.id}:${invoice.updatedAt}:${previousId || invoice.stripeTerminalLastPaymentIntentId || 'initial'}` });
+    const saved = saveState(invoice.id, {
+      stripeTerminalPaymentIntentId: intent.id, stripePaymentIntentId: intent.id,
+      stripePaymentStatus: 'pending', stripePaymentError: null, stripeLivemode: intent.livemode,
+    });
+    if (saved === null) {
+      await stripe.paymentIntents.cancel(intent.id);
+      throw Object.assign(new Error('The invoice was removed before payment could start.'), { statusCode: 404 });
+    }
+    return intent;
+  });
+}
+
 export async function createContractCheckoutSession(stripe, contract, parameters, saveState) {
   const key = `contract:${contract.id}`;
   const previous = pendingInvoiceSessions.get(key) || Promise.resolve();
@@ -113,11 +178,11 @@ export async function createContractCheckoutSession(stripe, contract, parameters
 }
 
 export async function createInvoiceCheckoutSession(stripe, invoice, options, saveState) {
-  const previous = pendingInvoiceSessions.get(invoice.id) || Promise.resolve();
-  const request = previous.catch(() => {}).then(async () => {
+  return withInvoicePaymentLock(invoice.id, async () => {
     if (['paid', 'void', 'ongoing'].includes(invoice.status) || invoice.amountCents <= 0) {
       throw Object.assign(new Error('This invoice is not currently payable.'), { statusCode: 409 });
     }
+    await cancelTerminalInvoicePayment(stripe, invoice, saveState);
     if (invoice.stripeCheckoutSessionId) {
       const current = await stripe.checkout.sessions.retrieve(invoice.stripeCheckoutSessionId);
       if (!await canReplaceCheckoutSession(stripe, current)) {
@@ -144,18 +209,16 @@ export async function createInvoiceCheckoutSession(stripe, invoice, options, sav
         cancelQuery: `invoiceCanceled=${encodeURIComponent(invoice.id)}`,
       }),
     }, { idempotencyKey: `${invoice.id}:${invoice.updatedAt}:${options.uiMode}:${invoice.stripeCheckoutSessionId || 'initial'}` });
-    saveState(invoice.id, {
+    const saved = saveState(invoice.id, {
       stripeCheckoutSessionId: session.id, stripeCheckoutUrl: session.url || null,
       stripeCheckoutExpiresAt: new Date(session.expires_at * 1000).toISOString(),
       stripePaymentStatus: 'pending', stripePaymentError: null, stripePaymentIntentId: null,
       stripeLivemode: session.livemode,
     });
+    if (saved === null) {
+      await stripe.checkout.sessions.expire(session.id);
+      throw Object.assign(new Error('The invoice was removed before payment could start.'), { statusCode: 404 });
+    }
     return session;
   });
-  pendingInvoiceSessions.set(invoice.id, request);
-  try {
-    return await request;
-  } finally {
-    if (pendingInvoiceSessions.get(invoice.id) === request) pendingInvoiceSessions.delete(invoice.id);
-  }
 }

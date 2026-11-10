@@ -184,13 +184,188 @@ test('Stripe checkout can retry failed payments but not completed paid sessions'
   assert.equal(await stripeCheckout.canReplaceCheckoutSession(stripe, { status: 'complete', payment_status: 'paid', payment_intent: 'pi_paid' }), false);
 });
 
-test('Stripe invoice routes retain client checkout and omit admin payment action routes', async () => {
+test('Stripe Terminal reuses concurrent invoice intents, expires online links and uses saved USD amounts', async () => {
+  const invoice = { id: 'terminal-concurrent', invoiceNumber: '1000', status: 'sent', amountCents: 5000, currency: 'usd', updatedAt: 'test', stripeCheckoutSessionId: 'cs_terminal_previous' };
+  const intents = new Map();
+  const created = [];
+  let expired = 0;
+  let checkoutStatus = 'open';
+  const stripe = {
+    checkout: { sessions: {
+      retrieve: async () => ({ status: checkoutStatus }),
+      expire: async () => { expired++; checkoutStatus = 'expired'; },
+    } },
+    paymentIntents: {
+      create: async (params, options) => {
+        created.push({ params, options });
+        const intent = { ...params, id: `pi_terminal_${created.length}`, client_secret: 'test-secret', status: 'requires_payment_method', livemode: false };
+        intents.set(intent.id, intent);
+        return intent;
+      },
+      retrieve: async id => intents.get(id),
+      cancel: async id => { intents.get(id).status = 'canceled'; },
+    },
+  };
+  const save = (id, changes) => Object.assign(invoice, changes);
+  const results = await Promise.all([
+    stripeCheckout.createTerminalInvoicePayment(stripe, invoice, save),
+    stripeCheckout.createTerminalInvoicePayment(stripe, invoice, save),
+  ]);
+  assert.equal(created.length, 1);
+  assert.equal(expired, 1);
+  assert.equal(results[0].id, results[1].id);
+  assert.deepEqual(created[0].params.payment_method_types, ['card_present']);
+  assert.equal(created[0].params.amount, 5000);
+  assert.equal(created[0].params.capture_method, 'automatic');
+  assert.deepEqual(created[0].params.metadata, { invoiceId: invoice.id, source: 'terminal' });
+  assert.equal(invoice.stripeCheckoutSessionId, 'cs_terminal_previous');
+  assert.equal(invoice.stripeCheckoutUrl, null);
+  intents.get(results[0].id).status = 'processing';
+  await assert.rejects(() => stripeCheckout.createTerminalInvoicePayment(stripe, invoice, save), /already submitted/);
+  await assert.rejects(() => stripeCheckout.cancelTerminalInvoicePayment(stripe, invoice, save), /submitted/);
+  await assert.rejects(() => stripeCheckout.createInvoiceCheckoutSession(stripe, invoice, { uiMode: 'hosted' }, save), /submitted/);
+  intents.get(results[0].id).status = 'requires_payment_method';
+  await stripeCheckout.cancelTerminalInvoicePayment(stripe, invoice, save);
+  await stripeCheckout.createTerminalInvoicePayment(stripe, invoice, save);
+  assert.equal(created.length, 2);
+  assert.notEqual(created[0].options.idempotencyKey, created[1].options.idempotencyKey);
+});
+
+test('Stripe Terminal refuses paid, void, ongoing, zero and non-USD invoices or submitted online payments', async () => {
+  const base = { id: 'terminal-rejected', status: 'sent', amountCents: 5000, currency: 'usd' };
+  for (const changes of [{ status: 'paid' }, { status: 'void' }, { status: 'ongoing' }, { amountCents: 0 }, { currency: 'eur' }]) {
+    await assert.rejects(() => stripeCheckout.createTerminalInvoicePayment({}, { ...base, ...changes }, () => {}), error => error.statusCode === 409);
+  }
+  const stripe = { checkout: { sessions: { retrieve: async () => ({ status: 'complete', payment_status: 'paid' }) } } };
+  await assert.rejects(() => stripeCheckout.createTerminalInvoicePayment(stripe, { ...base, stripeCheckoutSessionId: 'cs_paid' }, () => {}), /already been submitted/);
+});
+
+test('Stripe invoice payment creation cancels unexposed payments if a queued invoice was deleted', async () => {
+  const invoice = { id: 'terminal-deleted', status: 'sent', amountCents: 5000, currency: 'usd', updatedAt: 'test' };
+  const canceled = [];
+  const stripe = {
+    paymentIntents: {
+      create: async () => ({ id: 'pi_deleted', livemode: false }),
+      cancel: async id => { canceled.push(id); },
+    },
+    checkout: { sessions: {
+      create: async () => ({ id: 'cs_deleted', expires_at: 2000000000 }),
+      expire: async id => { canceled.push(id); },
+    } },
+  };
+  await assert.rejects(() => stripeCheckout.createTerminalInvoicePayment(stripe, invoice, () => null), error => error.statusCode === 404);
+  await assert.rejects(() => stripeCheckout.createInvoiceCheckoutSession(stripe, invoice, { uiMode: 'hosted' }, () => null), error => error.statusCode === 404);
+  assert.deepEqual(canceled, ['pi_deleted', 'cs_deleted']);
+});
+
+test('Stripe Terminal and hosted checkout serialize switching payment methods without parallel charges', async () => {
+  const invoice = { id: 'terminal-online-switch', invoiceNumber: '1000', status: 'sent', amountCents: 5000, currency: 'usd', updatedAt: 'test', stripeCheckoutSessionId: 'cs_previous_expired' };
+  const events = [];
+  const stripe = {
+    paymentIntents: {
+      create: async params => { events.push('terminal-created'); return { ...params, id: 'pi_switch', status: 'requires_payment_method', livemode: false }; },
+      retrieve: async () => ({ id: 'pi_switch', status: 'requires_payment_method' }),
+      cancel: async () => { events.push('terminal-canceled'); },
+    },
+    checkout: { sessions: { retrieve: async () => ({ status: 'expired' }), create: async (params, options) => {
+      assert.ok(options.idempotencyKey.endsWith(':cs_previous_expired'));
+      events.push('checkout-created');
+      return { id: 'cs_switch', url: 'https://checkout.stripe.com/c/pay/test', expires_at: 2000000000 };
+    } } },
+  };
+  const save = (id, changes) => Object.assign(invoice, changes);
+  await Promise.all([
+    stripeCheckout.createTerminalInvoicePayment(stripe, invoice, save),
+    stripeCheckout.createInvoiceCheckoutSession(stripe, invoice, { uiMode: 'hosted', origin: 'https://example.test', returnPath: 'portal-found.html' }, save),
+  ]);
+  assert.deepEqual(events, ['terminal-created', 'terminal-canceled', 'checkout-created']);
+  assert.equal(invoice.stripeTerminalPaymentIntentId, null);
+});
+
+test('Stripe Terminal endpoints enforce admin access, configuration, saved amounts, reconciliation and mutation guards', async context => {
+  const { default: express } = await import(pathToFileURL(path.join(isolatedBackend, 'node_modules/express/index.js')));
+  const { PaymentIntentResource } = await import(pathToFileURL(path.join(isolatedBackend, 'node_modules/stripe/esm/resources/PaymentIntents.js')));
+  const { ConnectionTokenResource } = await import(pathToFileURL(path.join(isolatedBackend, 'node_modules/stripe/esm/resources/Terminal/ConnectionTokens.js')));
+  const { config } = await import(pathToFileURL(path.join(isolatedBackend, 'src/config.js')));
+  const { terminalRouter } = await import(pathToFileURL(path.join(isolatedBackend, 'src/routes/terminal.js')));
+  const { invoicesRouter } = await import(pathToFileURL(path.join(isolatedBackend, 'src/routes/invoices.js')));
+  const previous = {
+    stripeSecretKey: config.stripeSecretKey, stripeTerminalEnabled: config.stripeTerminalEnabled,
+    stripeTerminalLocationId: config.stripeTerminalLocationId, stripeTerminalSimulated: config.stripeTerminalSimulated,
+  };
+  const admin = store.issueAdminSession(store.getAdminUserByEmail(config.adminBootstrapEmail));
+  const client = store.issueClientSession({ id: 'terminal-client', accountId: 'client_1', email: 'terminal@example.test' });
+  const invoice = store.createInvoice({ accountId: 'client_1', serviceAddress: 'Terminal route test', amountCents: 5000 });
+  let intent;
+  let created = 0;
+  context.mock.method(PaymentIntentResource.prototype, 'create', async parameters => {
+    created++;
+    intent = { ...parameters, id: 'pi_terminal_route', client_secret: 'terminal_fixture_secret', status: 'requires_payment_method', livemode: false };
+    return intent;
+  });
+  context.mock.method(PaymentIntentResource.prototype, 'retrieve', async () => intent);
+  context.mock.method(PaymentIntentResource.prototype, 'cancel', async () => { intent.status = 'canceled'; return intent; });
+  context.mock.method(ConnectionTokenResource.prototype, 'create', async parameters => {
+    assert.equal(parameters.location, 'tml_fixture');
+    return { secret: 'terminal_connection_fixture' };
+  });
+  const app = express();
+  app.use(express.json());
+  app.use('/terminal', terminalRouter);
+  app.use('/invoices', invoicesRouter);
+  const server = await new Promise(resolve => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)); });
+  try {
+    const send = (route, method = 'POST', token = admin.token, body = {}) => fetch(`http://127.0.0.1:${server.address().port}${route}`, {
+      method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...(method === 'GET' ? {} : { body: JSON.stringify(body) }),
+    });
+    const route = `/terminal/invoices/${invoice.id}`;
+    assert.equal((await send('/terminal/config', 'GET', '')).status, 401);
+    assert.equal((await send(`${route}/payment-intent`, 'POST', client.token)).status, 401);
+    Object.assign(config, { stripeTerminalEnabled: false, stripeSecretKey: 'sk_test_terminal_fixture', stripeTerminalLocationId: 'tml_fixture', stripeTerminalSimulated: true });
+    assert.equal((await (await send('/terminal/config', 'GET')).json()).enabled, false);
+    assert.equal((await send('/terminal/connection-token')).status, 503);
+    config.stripeTerminalEnabled = true;
+    config.stripeSecretKey = 'sk_live_not_a_real_key';
+    assert.equal((await send(`${route}/payment-intent`)).status, 503);
+    config.stripeSecretKey = 'sk_test_terminal_fixture';
+    assert.equal((await (await send('/terminal/connection-token')).json()).secret, 'terminal_connection_fixture');
+    const responses = await Promise.all([send(`${route}/payment-intent`, 'POST', admin.token, { amountCents: 1 }), send(`${route}/payment-intent`)]);
+    for (const response of responses) {
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).clientSecret, 'terminal_fixture_secret');
+    }
+    assert.equal(created, 1);
+    assert.equal(intent.amount, invoice.amountCents);
+    assert.equal(intent.amount, 5000);
+    assert.equal((await send(`${route}/reconcile`)).status, 200);
+    assert.equal(invoice.status, 'sent');
+    intent.status = 'processing';
+    assert.equal((await send(`/invoices/${invoice.id}`, 'PATCH', admin.token, { amountCents: 1 })).status, 409);
+    assert.equal((await send(`/invoices/${invoice.id}`, 'DELETE')).status, 409);
+    assert.equal((await send(`${route}/cancel`)).status, 409);
+    intent.status = 'succeeded'; intent.amount_received = 1;
+    assert.equal((await send(`${route}/reconcile`)).status, 409);
+    assert.equal(invoice.status, 'sent');
+    intent.amount_received = 5000;
+    const verified = await send(`${route}/reconcile`);
+    assert.equal(verified.status, 200);
+    assert.equal((await verified.json()).invoice.status, 'paid');
+    assert.equal((await send(`${route}/payment-intent`)).status, 409);
+    assert.equal((await send(`${route}/reconcile`)).status, 200);
+  } finally {
+    Object.assign(config, previous);
+    await new Promise(resolve => server.close(resolve));
+  }
+});
+
+test('Stripe invoice routes retain client checkout and add a native admin payment link without website payment controls', async () => {
   const { invoicesRouter } = await import(pathToFileURL(path.join(isolatedBackend, 'src/routes/invoices.js')));
   const paths = invoicesRouter.stack.filter(layer => layer.route).map(layer => layer.route.path);
   assert.ok(paths.includes('/:invoiceId/checkout-session'));
   assert.ok(paths.includes('/:invoiceId/checkout-session'));
   assert.equal(paths.includes('/:invoiceId/stripe-status'), false);
-  assert.equal(paths.includes('/:invoiceId/payment-link'), false);
+  assert.equal(paths.includes('/:invoiceId/payment-link'), true);
   assert.equal(paths.includes('/:invoiceId/reconcile-payment'), false);
   const html = readFileSync(path.join(projectRoot, 'portal-admin.html'), 'utf8');
   assert.equal(html.includes('invoice-payment-create'), false);
@@ -202,6 +377,64 @@ test('Stripe invoice routes retain client checkout and omit admin payment action
   assert.equal(invoiceScript.includes('data-invoice-payments'), false);
   assert.equal(adminScript.includes('data-invoice-payments'), false);
   assert.equal(invoiceScript.includes('stripePaymentLabel'), false);
+});
+
+test('native admin payment links use saved invoice amounts and reuse hosted Stripe sessions', async (context) => {
+  const { default: express } = await import(pathToFileURL(path.join(isolatedBackend, 'node_modules/express/index.js')));
+  const { SessionResource } = await import(pathToFileURL(path.join(isolatedBackend, 'node_modules/stripe/esm/resources/Checkout/Sessions.js')));
+  const { config } = await import(pathToFileURL(path.join(isolatedBackend, 'src/config.js')));
+  const { invoicesRouter } = await import(pathToFileURL(path.join(isolatedBackend, 'src/routes/invoices.js')));
+  const previousKey = config.stripeSecretKey;
+  const admin = store.issueAdminSession(store.getAdminUserByEmail(config.adminBootstrapEmail));
+  const client = store.createClient({ name: 'Native Admin Link', address: '1 Mobile Street' });
+  const clientSession = store.issueClientSession({ id: 'native-user', accountId: client.id, email: 'native@example.test' });
+  const invoice = store.createInvoice({ accountId: client.id, lineItems: [{ type: 'labor', description: 'Native link test', quantity: 1, unitPriceCents: 5000 }] });
+  const zero = store.createInvoice({ accountId: client.id, amountCents: 0 });
+  const captured = [];
+  const sessions = new Map();
+  context.mock.method(SessionResource.prototype, 'create', async parameters => {
+    captured.push(parameters);
+    const session = { id: 'cs_native_link', status: 'open', mode: 'payment', currency: 'usd', ui_mode: 'hosted', metadata: parameters.metadata, url: 'https://checkout.stripe.com/c/pay/native-test', expires_at: Math.floor(Date.now() / 1000) + 3600, amount_total: 5000 };
+    sessions.set(session.id, session);
+    return session;
+  });
+  context.mock.method(SessionResource.prototype, 'retrieve', async id => sessions.get(id));
+  context.mock.method(SessionResource.prototype, 'expire', async id => { sessions.get(id).status = 'expired'; });
+  const app = express();
+  app.use(express.json());
+  app.use('/invoices', invoicesRouter);
+  const server = await new Promise(resolve => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)); });
+  try {
+    const send = (id, token = admin.token) => fetch(`http://127.0.0.1:${server.address().port}/invoices/${id}/payment-link`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), Origin: 'https://untrusted.example' }, body: JSON.stringify({ amountCents: 1 }),
+    });
+    assert.equal((await send(invoice.id, '')).status, 401);
+    assert.equal((await send(invoice.id, clientSession.token)).status, 401);
+    assert.equal((await send('missing')).status, 404);
+    assert.equal((await send(zero.id)).status, 409);
+    config.stripeSecretKey = '';
+    assert.equal((await send(invoice.id)).status, 503);
+    config.stripeSecretKey = 'sk_test_native_fixture';
+    const responses = await Promise.all([send(invoice.id), send(invoice.id)]);
+    for (const response of responses) {
+      assert.equal(response.status, 200);
+      const payload = await response.json();
+      assert.equal(payload.url, 'https://checkout.stripe.com/c/pay/native-test');
+      assert.equal(payload.clientSecret, undefined);
+    }
+    assert.equal(captured.length, 1);
+    assert.equal(captured[0].line_items[0].price_data.unit_amount, 5000);
+    assert.ok(captured[0].success_url.startsWith('https://www.stickman-handyman.com/'));
+    store.updateInvoice(invoice.id, { status: 'paid' });
+    assert.equal((await send(invoice.id)).status, 409);
+  } finally {
+    config.stripeSecretKey = previousKey;
+    await new Promise(resolve => server.close(resolve));
+    store.updateInvoice(invoice.id, { status: 'sent' });
+    store.deleteInvoice(invoice.id);
+    store.deleteInvoice(zero.id);
+    store.deleteClient(client.id);
+  }
 });
 
 test('only expired pending sandbox test checkouts can be deleted without Stripe', async () => {
@@ -1006,9 +1239,9 @@ test('Stripe signed webhooks confirm payments only after validating amounts and 
   app.use('/stripe', express.raw({ type: 'application/json' }), stripeRouter);
   const server = await new Promise(resolve => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)); });
   try {
-    const send = async (type, currency = 'usd', validSignature = true) => {
+    const send = async (type, currency = 'usd', validSignature = true, intentId = 'pi_webhook', source) => {
       const payload = JSON.stringify({ id: `evt_${type}`, type, created: Math.floor(Date.now() / 1000), data: { object: {
-        id: 'pi_webhook', amount: 5000, amount_received: 5000, currency, metadata: { invoiceId: invoice.id },
+        id: intentId, amount: 5000, amount_received: 5000, currency, metadata: { invoiceId: invoice.id, source },
       } } });
       const signature = Stripe.webhooks.generateTestHeaderString({ payload, secret: validSignature ? config.stripeWebhookSecret : 'wrong_secret' });
       return fetch(`http://127.0.0.1:${server.address().port}/stripe/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'stripe-signature': signature }, body: payload });
@@ -1019,9 +1252,14 @@ test('Stripe signed webhooks confirm payments only after validating amounts and 
     assert.equal(invoice.stripePaymentStatus, 'processing');
     assert.equal((await send('payment_intent.payment_failed')).status, 200);
     assert.equal(invoice.stripePaymentStatus, 'failed');
+    store.updateInvoiceStripeState(invoice.id, { stripeTerminalPaymentIntentId: 'pi_terminal_active', stripePaymentStatus: 'pending' });
+    assert.equal((await send('payment_intent.payment_failed')).status, 200);
+    assert.equal(invoice.stripePaymentStatus, 'pending');
+    assert.equal((await send('payment_intent.canceled', 'usd', true, 'pi_terminal_superseded', 'terminal')).status, 200);
+    assert.equal(invoice.stripePaymentStatus, 'pending');
     assert.equal((await send('payment_intent.succeeded', 'eur')).status, 409);
     assert.equal(invoice.status, 'sent');
-    assert.equal((await send('payment_intent.succeeded')).status, 200);
+    assert.equal((await send('payment_intent.succeeded', 'usd', true, 'pi_terminal_active', 'terminal')).status, 200);
     assert.equal(invoice.status, 'paid');
     assert.equal((await send('payment_intent.payment_failed')).status, 200);
     assert.equal(invoice.stripePaymentStatus, 'succeeded');
@@ -1155,6 +1393,54 @@ test('discounted invoice PDF regenerates instead of returning a stale cached fil
 
   assert.equal(buffer.subarray(0, 4).toString(), '%PDF');
   assert.notEqual(buffer.toString(), 'stale cached PDF');
+});
+
+test('invoice PDF breakdown uses plain amounts and hides subtotal without deductions', async () => {
+  for (const [name, adjustments, expectedRows, total] of [
+    ['no deductions', {}, [], '100.00'],
+    ['retainer only', { retainerCreditCents: 3000, discountCents: 3000, amountCents: 7000 }, [['Retainer credit', '-30.00']], '70.00'],
+    ['discount only', { serviceDiscountCents: 1000, discountCents: 1000, amountCents: 9000 }, [['Labor discount', '-10.00']], '90.00'],
+    ['combined', { retainerCreditCents: 3000, serviceDiscountCents: 1000, discountCents: 4500, amountCents: 5500 }, [['Retainer credit', '-30.00'], ['Labor discount', '-10.00'], ['Additional discount', '-5.00']], '55.00'],
+    ['fully covered', { retainerCreditCents: 10000, discountCents: 10000, amountCents: 0 }, [['Retainer credit', '-100.00']], '0.00'],
+  ]) {
+    for (const serviceAddress of ['', '2 Service St']) {
+      const buffer = await pdf.generateInvoicePdfBuffer({
+        invoiceNumber: 'INV-9002', issueDate: '2026-10-26', serviceAddress,
+        subtotalCents: 10000, amountCents: 10000, ...adjustments,
+        lineItems: [{ type: 'labor', description: 'Labor', quantity: 1, unitPriceCents: 10000 }],
+      }, { name: 'Test Client', address: '1 Test St' });
+      const document = await PDFDocument.load(buffer);
+      document.registerFontkit(fontkit);
+      const font = await document.embedFont(readFileSync(path.join(temporaryRoot, 'fonts', 'stix-two-text-bold.ttf')), { features: { liga: false } });
+      const contents = document.getPage(0).node.Contents();
+      const streams = contents instanceof PDFArray ? contents.asArray() : [contents];
+      const decoded = streams.map(ref => document.context.lookup(ref))
+        .filter(stream => stream instanceof PDFRawStream)
+        .map(stream => Buffer.from(decodePDFRawStream(stream).decode()).toString('latin1')).join('\n');
+      const hasText = text => decoded.includes(`${font.encodeText(text).toString()} Tj`);
+      assert.equal(hasText('Subtotal'), expectedRows.length > 0, name);
+      for (const label of ['Retainer credit', 'Labor discount', 'Additional discount']) {
+        assert.equal(hasText(label), expectedRows.some(([rowLabel]) => rowLabel === label), `${name}: ${label}`);
+      }
+      for (const [, amount] of expectedRows) {
+        assert.ok(hasText(amount), `${name}: ${amount}`);
+        assert.equal(hasText(amount.replace('-', '-$')), false, `${name}: no dollar sign on adjustments`);
+      }
+      assert.equal(hasText('$100.00'), false, `${name}: no dollar sign on subtotal`);
+      assert.ok(hasText(total), `${name}: correct final total`);
+    }
+  }
+});
+
+test('undiscounted invoice download replaces the old cached subtotal layout', async () => {
+  const invoicesDirectory = path.join(temporaryRoot, 'invoices');
+  mkdirSync(invoicesDirectory, { recursive: true });
+  writeFileSync(path.join(invoicesDirectory, 'StickmanHandyman_9997.pdf'), 'old subtotal layout');
+  const buffer = await pdf.getInvoicePdfBuffer({
+    invoiceNumber: 'INV-9997', issueDate: '2026-10-26', amountCents: 5000,
+    lineItems: [{ type: 'labor', description: 'Labor', quantity: 1, unitPriceCents: 5000 }],
+  }, { name: 'Test Client', address: '1 Test St' });
+  assert.equal(buffer.subarray(0, 4).toString(), '%PDF');
 });
 
 test('invoice PDF renders city names with ordinary fi glyphs', async () => {
@@ -1717,6 +2003,90 @@ test('editing a progress invoice does not count its prior amount against its own
   });
   assert.equal(pricing.error, undefined);
   assert.equal(pricing.contractBalanceCents, 50000);
+});
+
+test('native invoice edit preview excludes itself, preserves saved rates and matches save', () => {
+  const client = store.createClient({ name: 'Native edit preview', address: '41 Preview Way' });
+  const contractor = repository.createContractor({ name: 'Preview contractor', hourlyRateCents: 5000 });
+  const contract = store.createContract({
+    clientId: client.id, contractType: 'labor', status: 'active', title: 'Preview job', scope: 'Installation',
+    serviceAddress: client.address, startDate: '2026-01-01', laborPricingModel: 'fixed', laborFixedAmountCents: 30000,
+  });
+  const input = {
+    accountId: client.id, serviceAddress: client.address, issueDate: '2026-11-10', contractId: contract.id,
+    contractorHours: [{ contractorId: contractor.id, hours: 2 }], lineItems: [],
+  };
+  const invoice = store.createInvoice(input);
+  try {
+    repository.updateContractor(contractor.id, { hourlyRateCents: 15000 });
+    const preview = store.previewInvoiceContractPricing({ ...input, invoiceId: invoice.id, contractorHours: [{ contractorId: contractor.id, hours: 3 }] });
+    assert.equal(preview.error, undefined);
+    assert.equal(preview.subtotalCents, 18000);
+    assert.equal(preview.amountCents, 18000);
+    assert.equal(preview.contractBalanceCents, 12000);
+    const saved = store.updateInvoice(invoice.id, { ...input, contractorHours: [{ contractorId: contractor.id, hours: 3 }] });
+    assert.equal(saved.subtotalCents, preview.subtotalCents);
+    assert.equal(saved.amountCents, preview.amountCents);
+    assert.equal(saved.contractBalanceCents, preview.contractBalanceCents);
+  } finally {
+    store.deleteInvoice(invoice.id); store.deleteContract(contract.id); store.deleteClient(client.id);
+  }
+});
+
+test('native ongoing preview avoids contract caps until the job is finalized', () => {
+  const client = store.createClient({ name: 'Native ongoing preview', address: '42 Preview Way' });
+  const contract = store.createContract({
+    clientId: client.id, contractType: 'labor', status: 'active', title: 'Ongoing quote', scope: 'Installation',
+    serviceAddress: client.address, startDate: '2026-01-01', laborPricingModel: 'fixed', laborFixedAmountCents: 10000,
+  });
+  const input = { accountId: client.id, serviceAddress: client.address, issueDate: '2026-11-10', jobName: 'Kitchen', isOngoing: true, contractorHours: [owner], lineItems: [{ type: 'material', description: 'Materials', quantity: 1, unitPriceCents: 5000 }] };
+  const preview = store.previewInvoiceContractPricing(input);
+  const job = store.createInvoice(input);
+  try {
+    assert.equal(preview.contractId, null);
+    assert.equal(preview.amountCents, job.amountCents);
+    assert.equal(preview.amountCents, 13000);
+    const finalPreview = store.previewInvoiceContractPricing({ ...input, invoiceId: job.id, isOngoing: false, contractId: contract.id });
+    const saved = store.updateInvoice(job.id, { ...input, isOngoing: false, contractId: contract.id });
+    assert.equal(finalPreview.amountCents, 10000);
+    assert.equal(saved.amountCents, finalPreview.amountCents);
+    assert.equal(saved.status, 'sent');
+    assert.match(saved.invoiceNumber, /^INV-/);
+  } finally {
+    store.deleteInvoice(job.id); store.deleteContract(contract.id); store.deleteClient(client.id);
+  }
+});
+
+test('native invoice preview endpoint requires admin access and reports invalid drafts', async () => {
+  const { default: express } = await import(pathToFileURL(path.join(isolatedBackend, 'node_modules/express/index.js')));
+  const { invoicesRouter } = await import(pathToFileURL(path.join(isolatedBackend, 'src/routes/invoices.js')));
+  const { config } = await import(pathToFileURL(path.join(isolatedBackend, 'src/config.js')));
+  const admin = store.issueAdminSession(store.getAdminUserByEmail(config.adminBootstrapEmail));
+  const client = store.createClient({ name: 'Preview route client', address: '43 Preview Way' });
+  const invoice = store.createInvoice({ accountId: client.id, serviceAddress: client.address, contractorHours: [owner] });
+  const app = express();
+  app.use(express.json());
+  app.use('/invoices', invoicesRouter);
+  const server = await new Promise(resolve => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)); });
+  try {
+    const endpoint = `http://127.0.0.1:${server.address().port}/invoices/contract-pricing-preview`;
+    const preview = (body, token = admin.token) => fetch(endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body),
+    });
+    const input = { accountId: client.id, invoiceId: invoice.id, serviceAddress: client.address, contractorHours: [{ contractorId: owner.contractorId, hours: 2 }], lineItems: [] };
+    assert.equal((await preview(input, 'invalid')).status, 401);
+    assert.equal((await preview({ ...input, invoiceId: 'missing' })).status, 404);
+    assert.equal((await preview({ ...input, contractorHours: [{ contractorId: 'missing', hours: 1 }] })).status, 400);
+    assert.equal((await preview({ ...input, contractorHours: [{ contractorId: owner.contractorId, hours: 0.1 }] })).status, 400);
+    const response = await preview(input);
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.pricing.amountCents, 16000);
+    assert.equal(result.pricing.subtotalCents, 16000);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    store.deleteInvoice(invoice.id); store.deleteClient(client.id);
+  }
 });
 
 test('maintenance agreement PDFs contain package-specific coverage, benefits, and rules', async () => {

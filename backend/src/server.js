@@ -16,6 +16,7 @@ import { dashboardRouter } from './routes/dashboard.js';
 import { healthRouter } from './routes/health.js';
 import { invoicesRouter } from './routes/invoices.js';
 import { stripeRouter } from './routes/stripe.js';
+import { terminalRouter } from './routes/terminal.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +39,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/client-auth', clientAuthRouter);
 app.use('/api/clients', clientsRouter);
 app.use('/api/invoices', invoicesRouter);
+app.use('/api/terminal', terminalRouter);
 app.use('/api/contracts', contractsRouter);
 app.use('/api/contract-signatures', contractSignaturesRouter);
 app.use('/api/contractors', contractorsRouter);

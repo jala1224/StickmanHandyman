@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import Stripe from 'stripe';
-import { canReplaceCheckoutSession, createInvoiceCheckoutSession, getCheckoutOrigin, getCheckoutResponse } from '../services/stripeCheckout.js';
+import { cancelTerminalInvoicePayment, canReplaceCheckoutSession, createInvoiceCheckoutSession, getCheckoutOrigin, getCheckoutResponse, withInvoicePaymentLock } from '../services/stripeCheckout.js';
 import { readBearerToken, requireAdmin } from '../middleware/auth.js';
 import { config } from '../config.js';
 import { authorizeInvoiceLookupAccess, authorizeInvoicePaymentAccess, createInvoice, deleteInvoice, getClientById, getInvoiceById, getInvoices, previewInvoiceContractPricing, recordAudit, updateInvoice, updateInvoiceStripeState, verifyAdminSession, verifyClientSession, verifyLookupSession } from '../services/store.js';
@@ -50,16 +50,23 @@ invoicesRouter.get('/', requireAdmin, (req, res) => {
 });
 
 invoicesRouter.post('/contract-pricing-preview', requireAdmin, (req, res) => {
-  const parsed = invoiceSchema.partial().safeParse(req.body);
+  const parsed = invoiceSchema.partial().extend({ invoiceId: z.string().min(1).optional() }).safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid contract invoice preview.', details: parsed.error.flatten() });
   }
   if (!parsed.data.accountId && !parsed.data.clientId) {
     return res.status(400).json({ error: 'Select a client to preview contract pricing.' });
   }
-  const pricing = previewInvoiceContractPricing(parsed.data);
-  if (pricing.error) return res.status(400).json({ error: pricing.error });
-  return res.json({ pricing });
+  if (parsed.data.invoiceId && !getInvoiceById(parsed.data.invoiceId)) {
+    return res.status(404).json({ error: 'Invoice not found.' });
+  }
+  try {
+    const pricing = previewInvoiceContractPricing(parsed.data);
+    if (pricing.error) return res.status(400).json({ error: pricing.error });
+    return res.json({ pricing });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ error: error.message || 'Unable to preview invoice pricing.' });
+  }
 });
 
 invoicesRouter.post('/', requireAdmin, async (req, res) => {
@@ -102,12 +109,15 @@ invoicesRouter.post('/', requireAdmin, async (req, res) => {
 });
 
 invoicesRouter.delete('/:invoiceId', requireAdmin, async (req, res) => {
+  let result;
   try {
-    await expireInvoiceCheckout(getInvoiceById(req.params.invoiceId));
+    result = await withInvoicePaymentLock(req.params.invoiceId, async () => {
+      await expireInvoiceCheckout(getInvoiceById(req.params.invoiceId));
+      return deleteInvoice(req.params.invoiceId);
+    });
   } catch (error) {
     return res.status(error.statusCode || 502).json({ error: error.message });
   }
-  const result = deleteInvoice(req.params.invoiceId);
   if (result.error === 'INVOICE_NOT_FOUND') {
     return res.status(404).json({ error: 'Invoice not found.' });
   }
@@ -143,8 +153,10 @@ invoicesRouter.patch('/:invoiceId', requireAdmin, async (req, res) => {
 
   let invoice;
   try {
-    await expireInvoiceCheckout(getInvoiceById(req.params.invoiceId));
-    invoice = updateInvoice(req.params.invoiceId, parsed.data);
+    invoice = await withInvoicePaymentLock(req.params.invoiceId, async () => {
+      await expireInvoiceCheckout(getInvoiceById(req.params.invoiceId));
+      return updateInvoice(req.params.invoiceId, parsed.data);
+    });
   } catch (error) {
     return res.status(error.statusCode || 400).json({ error: error.message || 'Unable to calculate contract invoice pricing.' });
   }
@@ -247,6 +259,27 @@ invoicesRouter.get('/:invoiceId/pdf', async (req, res) => {
   }
 });
 
+invoicesRouter.post('/:invoiceId/payment-link', requireAdmin, async (req, res) => {
+  const invoice = getInvoiceById(req.params.invoiceId);
+  if (!invoice) return res.status(404).json({ error: 'Invoice not found.' });
+  if (['paid', 'void', 'ongoing'].includes(invoice.status) || !(invoice.amountCents > 0)) {
+    return res.status(409).json({ error: 'This invoice is not currently payable.' });
+  }
+  if (!config.stripeSecretKey) return res.status(503).json({ error: 'Stripe is not configured yet.' });
+  try {
+    const stripe = new Stripe(config.stripeSecretKey);
+    const session = await createInvoiceCheckoutSession(stripe, invoice, {
+      uiMode: 'hosted', origin: getCheckoutOrigin(req.headers.origin, config.corsOrigins), returnPath: 'portal-found.html',
+    }, updateInvoiceStripeState);
+    if (!session.url) return res.status(502).json({ error: 'Stripe did not return a payment link.' });
+    recordAudit({ actorType: 'admin', actorId: req.admin.id, action: 'invoice.payment_link.created', entityType: 'invoice', entityId: invoice.id, metadata: { sessionId: session.id } });
+    return res.json({ url: session.url, expiresAt: invoice.stripeCheckoutExpiresAt || null });
+  } catch (error) {
+    console.error('Failed to create an admin invoice payment link:', error);
+    return res.status(error.statusCode === 409 ? 409 : 502).json({ error: error.statusCode === 409 ? error.message : 'Unable to create a payment link right now.' });
+  }
+});
+
 invoicesRouter.post('/:invoiceId/checkout-session', async (req, res) => {
   const parsed = z.object({
     lookupAccessToken: z.string().uuid().optional(),
@@ -301,6 +334,12 @@ invoicesRouter.post('/:invoiceId/checkout-session', async (req, res) => {
 });
 
 async function expireInvoiceCheckout(invoice) {
+  if (invoice?.stripeTerminalPaymentIntentId && invoice.status !== 'paid') {
+    if (!config.stripeSecretKey) {
+      throw Object.assign(new Error('Stripe must be configured to cancel Tap to Pay before changing this invoice.'), { statusCode: 503 });
+    }
+    await cancelTerminalInvoicePayment(new Stripe(config.stripeSecretKey), invoice, updateInvoiceStripeState);
+  }
   if (!invoice?.stripeCheckoutSessionId) return;
   if (!config.stripeSecretKey) {
     const expiresAt = Date.parse(invoice.stripeCheckoutExpiresAt || '');

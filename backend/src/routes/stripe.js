@@ -56,6 +56,10 @@ stripeRouter.post('/webhook', (req, res) => {
   }
 
   if (!matchesInvoicePayment(invoice, payment)) return res.status(409).json({ error: 'Stripe payment amount or currency does not match the invoice.' });
+  if (payment.status !== 'succeeded' && invoice.stripeTerminalPaymentIntentId
+    && payment.paymentIntentId !== invoice.stripeTerminalPaymentIntentId) return res.json({ received: true });
+  if (event.data.object.metadata?.source === 'terminal' && payment.status !== 'succeeded'
+    && payment.paymentIntentId !== invoice.stripeTerminalPaymentIntentId) return res.json({ received: true });
   if (payment.checkoutSessionId && invoice.stripeCheckoutSessionId && payment.checkoutSessionId !== invoice.stripeCheckoutSessionId && payment.status !== 'succeeded') return res.json({ received: true });
   if (payment.status === 'succeeded') {
     markInvoicePaid(invoice.id, payment.paymentIntentId);

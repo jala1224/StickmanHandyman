@@ -173,7 +173,7 @@ export async function generateInvoicePdfBuffer(invoice, client) {
   const datePosition = hasServiceAddress ? SERVICE_DATE_POSITION : BILLING_DATE_POSITION;
   const invoiceNumberPosition = hasServiceAddress ? INVOICE_NUMBER_POSITION : BILLING_INVOICE_NUMBER_POSITION;
   const invoiceNumberText = plainInvoiceNumber(invoice.invoiceNumber);
-  const amountDue = Math.max(0, Number(invoice.amountCents || invoice.subtotalCents || 0));
+  const amountDue = Math.max(0, Number(invoice.amountCents ?? invoice.subtotalCents ?? 0));
 
   page.drawText(clientName, {
     x: leftPercentToX(CLIENT_NAME_POSITION.left),
@@ -288,7 +288,10 @@ export async function generateInvoicePdfBuffer(invoice, client) {
   const serviceDiscountCents = Math.max(0, Number(invoice.serviceDiscountCents || 0));
   const totalDiscountCents = Math.max(0, Number(invoice.discountCents ?? (subtotalCents - amountDue)));
   const additionalDiscountCents = Math.max(0, totalDiscountCents - retainerCreditCents - serviceDiscountCents);
-  const breakdownRows = [{ label: 'Subtotal', amountCents: subtotalCents }];
+  const breakdownRows = [];
+  if (retainerCreditCents > 0 || serviceDiscountCents > 0 || additionalDiscountCents > 0) {
+    breakdownRows.push({ label: 'Subtotal', amountCents: subtotalCents });
+  }
   if (retainerCreditCents > 0) breakdownRows.push({ label: 'Retainer credit', amountCents: -retainerCreditCents });
   if (serviceDiscountCents > 0) breakdownRows.push({ label: 'Labor discount', amountCents: -serviceDiscountCents });
   if (additionalDiscountCents > 0) breakdownRows.push({ label: 'Additional discount', amountCents: -additionalDiscountCents });
@@ -296,7 +299,7 @@ export async function generateInvoicePdfBuffer(invoice, client) {
   breakdownRows.forEach((row, index) => {
     const topPercent = TOTAL_DUE_TOP_PERCENT - (breakdownRows.length - index) * TOTAL_BREAKDOWN_STEP_PERCENT;
     const label = row.label;
-    const amountText = `${row.amountCents < 0 ? '-' : ''}$${formatPlainAmount(Math.abs(row.amountCents))}`;
+    const amountText = `${row.amountCents < 0 ? '-' : ''}${formatPlainAmount(Math.abs(row.amountCents))}`;
     page.drawText(label, {
       x: leftPercentToX(TOTAL_BREAKDOWN_LABEL_LEFT_PERCENT),
       y: topPercentToBaselineY(topPercent),
@@ -336,17 +339,6 @@ export function invoicePdfFileName(invoiceNumber) {
 }
 
 export async function getInvoicePdfBuffer(invoice, client) {
-  const addressHasFi = /fi/i.test(String(invoice.billingEntityAddress || client?.address || ''))
-    || /fi/i.test(String(invoice.serviceAddress || ''));
-  if (invoice.contractId || Number(invoice.discountCents || 0) > 0 || addressHasFi) {
-    return generateInvoicePdfBuffer(invoice, client);
-  }
-
-  const savedPath = invoicePdfPath(invoice.invoiceNumber);
-  if (existsSync(savedPath)) {
-    return readFile(savedPath);
-  }
-
   return generateInvoicePdfBuffer(invoice, client);
 }
 

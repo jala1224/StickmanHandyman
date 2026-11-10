@@ -55,8 +55,15 @@ Fresh contractor storage initializes all required collections, including `paymen
 - `POST /api/clients/lookup`
 - `GET /api/invoices`
 - `POST /api/invoices`
+- `POST /api/invoices/contract-pricing-preview` accepts the invoice draft and an
+  optional `invoiceId` when editing. The preview excludes the existing invoice
+  from contract usage/balance calculations and preserves its saved contractor pay
+  rates. `isOngoing: true` previews the job subtotal without applying contract
+  credits or quote caps until finalization. Unknown invoice IDs return 404;
+  invalid pricing inputs return a readable 400 response.
 - `PATCH /api/invoices/:invoiceId`
 - Invoice PDFs use the selected business name/address for billing while retaining the client account. Portfolio maintenance contracts can match the client’s home, service, and associated business addresses.
+- Invoice PDF subtotal, retainer-credit and discount amounts omit currency symbols. Subtotal appears only when a retainer credit or discount is deducted. Downloads render the current layout from invoice data instead of serving older saved PDFs; saved files remain available for invoice numbering and archival storage.
 - Ongoing jobs are created through `POST /api/invoices` with `isOngoing: true` and a `jobName`; they have no invoice number or PDF until patched with `isOngoing: false`.
 - `POST /api/invoices/:invoiceId/lookup-access`
 - `GET /api/contracts`
@@ -105,6 +112,15 @@ Use the existing API rather than copying billing, retainer/rollover allocation, 
 - Logout: `POST /api/auth/logout` or `POST /api/client-auth/logout` with the current bearer token. Both revoke only that role's current session and return `204` with no body, including repeat calls. Do not JSON-decode a `204` response. Guest lookup tokens are separate, short-lived credentials and are not revoked by client logout.
 
 ### Account data and payments
+
+The backend supports a gated US Stripe Terminal Tap to Pay integration for native
+admin clients. It requires a signed native app, Apple's Tap to Pay entitlement,
+a Stripe Terminal location and physical-device verification before use.
+Admin-only `/api/terminal` endpoints provide configuration,
+connection tokens, invoice PaymentIntent creation, reconciliation and cancellation.
+Terminal defaults to disabled; secret keys remain on this backend. The admin
+invoice payment-link endpoint continues to use hosted Checkout, with shared
+per-invoice locking to serialize online/contactless payment transitions.
 
 1. After client login, call `GET /api/client-auth/me/activity` with the bearer header. It returns `{ "invoices": [...], "contracts": [...] }`, excludes ongoing jobs, and never accepts a caller-selected account ID. The API computes contract balances and pricing summaries.
 2. Download/view a client's own invoice using `GET /api/invoices/:invoiceId/pdf` with the same bearer header. The response is binary `application/pdf`; paid invoices remain readable. Other accounts' invoices return `403`. Admin bearer tokens retain PDF access across accounts.

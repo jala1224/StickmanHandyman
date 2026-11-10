@@ -707,20 +707,30 @@ function resolveInvoiceContractPricing(invoice, requestedAmountCents = null) {
 export function previewInvoiceContractPricing(input) {
   const accountId = input.accountId ?? input.clientId;
   const client = getClientById(accountId);
-  const contractorHours = normalizeContractorHours(input.contractorHours ?? []);
+  const existing = input.invoiceId ? getInvoiceById(input.invoiceId) : null;
+  if (!client) return { error: 'Select a valid client to preview pricing.' };
+  if (input.invoiceId && !existing) return { error: 'Invoice not found.' };
+  for (const entry of input.contractorHours || []) {
+    const contractor = getContractorById(entry.contractorId);
+    if (!contractor || (contractor.status !== 'active' && !existing?.contractorHours?.some(previous => previous.contractorId === entry.contractorId))) {
+      return { error: 'Select an active contractor for each hours row.' };
+    }
+  }
+  const contractorHours = normalizeContractorHours(input.contractorHours ?? [], existing?.contractorHours || []);
   return getInvoiceContractPricingInput({
-    contracts,
+    contracts: input.isOngoing ? [] : contracts,
     invoices,
     accountId,
     serviceAddress: input.serviceAddress || client?.address,
     billingBusinessId: input.billingBusinessId,
     issueDate: input.issueDate || todayLocalDate(),
-    contractId: input.contractId,
+    contractId: input.isOngoing ? undefined : input.contractId,
+    invoiceId: input.invoiceId,
     contractorHours,
     lineItems: buildInvoiceLineItems(input.lineItems ?? [], contractorHours, Array.isArray(input.contractorHours)),
     requestedAmountCents: input.amountCents,
     client,
-    contractPooledHoursEligible: input.contractPooledHoursEligible,
+    contractPooledHoursEligible: existing?.contractPooledHoursEligible,
   });
 }
 
@@ -901,7 +911,7 @@ export function updateInvoiceStripeState(invoiceId, changes) {
   const invoice = getInvoiceById(invoiceId);
   if (!invoice) return null;
   if (invoice.status === 'paid' && changes.stripePaymentStatus !== 'succeeded') return invoice;
-  for (const field of ['stripeCheckoutSessionId', 'stripeCheckoutUrl', 'stripeCheckoutExpiresAt', 'stripePaymentStatus', 'stripePaymentError', 'stripePaymentIntentId', 'stripeLivemode']) {
+  for (const field of ['stripeCheckoutSessionId', 'stripeCheckoutUrl', 'stripeCheckoutExpiresAt', 'stripePaymentStatus', 'stripePaymentError', 'stripePaymentIntentId', 'stripeTerminalPaymentIntentId', 'stripeTerminalLastPaymentIntentId', 'stripeLivemode']) {
     if (Object.hasOwn(changes, field)) invoice[field] = changes[field];
   }
   invoice.stripePaymentUpdatedAt = nowIso();
